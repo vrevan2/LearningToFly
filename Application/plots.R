@@ -67,7 +67,7 @@ dataset$DepDateTime[is.na(dataset$DepDateTime)]<-strptime(dataset$temp[is.na(dat
 #### End of Global Variables Creation Section ####
 
 
-#### New Variables Declared : (Add declared Variables here)
+#### New Variables/Columns Declared : (Add declared Variables here)
 
 # DepDateTime, ArrDateTime -  Have NAs as the flights might be cancelled
 # OriginDateTime, DestDateTime - Scheduled Times, Always present
