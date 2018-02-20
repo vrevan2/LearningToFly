@@ -69,12 +69,12 @@ dataset$DepDateTime[is.na(dataset$DepDateTime)]<-strptime(dataset$temp[is.na(dat
 
 #### New Variables/Columns Declared : (Add declared Variables here)
 
-# DepDateTime, ArrDateTime -  Have NAs as the flights might be cancelled
-# OriginDateTime, DestDateTime - Scheduled Times, Always present
+# dataset$DepDateTime, dataset$ArrDateTime -  Have NAs as the flights might be cancelled
+# dataset$OriginDateTime, dataset$DestDateTime - Scheduled Times, Always present
 
 ####
 
-#### Plots Names Declared #####
+#### Plot Names Declared #####
  
 
 ####
