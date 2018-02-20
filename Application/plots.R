@@ -11,8 +11,7 @@ setwd("C:/Users/Prakash/Desktop/CS 424")
 dataset<-read.csv("On_Time_Performance_2017_IL.csv")
 
 
-
-
+# Replacing - with / in the date strings
 
 dataset$FlightDate<-gsub("-", "/" , dataset$FlightDate)
 
