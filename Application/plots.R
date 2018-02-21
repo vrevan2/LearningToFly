@@ -23,7 +23,7 @@ dataset$CRSDepTime[nchar(dataset$CRSDepTime)==3]<-paste0( "0",dataset$CRSDepTime
 dataset$CRSDepTime[nchar(dataset$CRSDepTime)==2]<-paste0( "00",dataset$CRSDepTime[nchar(dataset$CRSDepTime)==2]) 
 dataset$CRSDepTime[nchar(dataset$CRSDepTime)==1]<-paste0( "000",dataset$CRSDepTime[nchar(dataset$CRSDepTime)==1]) 
 
-# checking for both mm/dd and dd/mm formats
+# checking for both mm-dd and mm/dd formats
 dataset$temp<-paste(dataset$FlightDate , dataset$CRSDepTime)
 dataset$OriginDateTime<-strptime(dataset$temp, format="%m-%d-%Y %H%M")
 dataset$OriginDateTime[is.na(dataset$OriginDateTime)]<-strptime(dataset$temp[is.na(dataset$OriginDateTime)], format="%m/%d/%Y %H%M")
