@@ -5,6 +5,12 @@ setwd("C:/Users/Prakash/Desktop/CS 424")
 
 ####
 
+#### libraries  ####
+
+library('lubridate')
+
+####
+
 #### Global Variables Creation Here ####
 
 
@@ -23,7 +29,6 @@ dataset$CRSDepTime[nchar(dataset$CRSDepTime)==3]<-paste0( "0",dataset$CRSDepTime
 dataset$CRSDepTime[nchar(dataset$CRSDepTime)==2]<-paste0( "00",dataset$CRSDepTime[nchar(dataset$CRSDepTime)==2]) 
 dataset$CRSDepTime[nchar(dataset$CRSDepTime)==1]<-paste0( "000",dataset$CRSDepTime[nchar(dataset$CRSDepTime)==1]) 
 
-# checking for both mm/dd and dd/mm formats
 dataset$temp<-paste(dataset$FlightDate , dataset$CRSDepTime)
 dataset$OriginDateTime<-strptime(dataset$temp, format="%m-%d-%Y %H%M")
 dataset$OriginDateTime[is.na(dataset$OriginDateTime)]<-strptime(dataset$temp[is.na(dataset$OriginDateTime)], format="%m/%d/%Y %H%M")
@@ -57,7 +62,14 @@ dataset$temp<-paste(dataset$FlightDate , dataset$DepTime)
 dataset$DepDateTime<-strptime(dataset$temp, format="%m-%d-%Y %H%M")
 dataset$DepDateTime[is.na(dataset$DepDateTime)]<-strptime(dataset$temp[is.na(dataset$DepDateTime)], format="%m/%d/%Y %H%M")
 
-
+dataset$CRSDepHourofDay<-hour(ymd_hms(dataset$OriginDateTime))
+dataset$CRSDepMonthofYear<-month(ymd_hms(dataset$OriginDateTime))
+dataset$DepHourofDay<-hour(ymd_hms(dataset$DepDateTime))
+dataset$DepMonthofYear<-month(ymd_hms(dataset$DepDateTime))
+dataset$CRSArrHourofDay<-hour(ymd_hms(dataset$DestDateTime))
+dataset$CRSArrMonthofYear<-month(ymd_hms(dataset$DestDateTime))
+dataset$ArrHourofDay<-hour(ymd_hms(dataset$ArrDateTime))
+dataset$ArrMonthofYear<-month(ymd_hms(dataset$ArrDateTime))
 
 
 #### End of Global Variables Creation Section ####
@@ -67,6 +79,8 @@ dataset$DepDateTime[is.na(dataset$DepDateTime)]<-strptime(dataset$temp[is.na(dat
 
 # dataset$DepDateTime, dataset$ArrDateTime -  Have NAs as the flights might be cancelled
 # dataset$OriginDateTime, dataset$DestDateTime - Scheduled Times, Always present
+# dataset$CRSArrHourofDay, ArrHourofDay , CRSDepHourofDay, DepHourofDay  - Range(0 - 23) , Non CRS ones have NA's due to same reason as above
+# dataset$CRSArrMonthofYear, ArrMonthofYear, CRSDepMonthofYear,  CRSDepMonthofYear - Range(1,12) , Non CRS ones have NA's due to same reason as above 
 
 ####
 
@@ -75,7 +89,16 @@ dataset$DepDateTime[is.na(dataset$DepDateTime)]<-strptime(dataset$temp[is.na(dat
 
 ####
 
+
+
+
+
 #### Plots ####
 
+AirportName = "ORD"
+d<-dataset[dataset$Origin == AirportName | dataset$Dest == AirportName,]
+summary(d)
+
+# Using aggregate according to the DayofMonth, HourofDay variables
 
 #### End of Plots ####
