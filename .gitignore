@@ -1,3 +1,5 @@
 /.vscode
+/.idea
 /Application/data/
 .Rproj.user
+.Rhistory
