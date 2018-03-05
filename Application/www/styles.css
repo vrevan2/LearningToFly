@@ -1,0 +1,85 @@
+*{
+    box-sizing: border-box;
+}
+
+.skin-blue .main-header .logo {
+	background-color: #ffffff;
+    color: #333333;
+    box-shadow: 0 5px 5px -5px #D3D3D3;
+    font-size: 25px;
+    font-weight: 350;
+}
+
+/* logo when hovered */
+.skin-blue .main-header .logo:hover {
+    background-color: #d6dde7;
+    color: #333333;
+}
+
+.skin-blue .main-header .navbar {
+    background-color: #ffffff;
+    box-shadow: 0 5px 5px -5px #D3D3D3;
+}
+
+.skin-blue .main-sidebar {
+    background-color: #ffffff;
+    box-shadow: 5px 0 5px -5px #D3D3D3;
+    font-size: 15px;
+}
+
+.skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
+    background-color: #869bb8;
+    color: #333333;
+    border-left-color: #203552;
+}
+
+.skin-blue .nav-tabs-custom>.nav-tabs>li.active{
+    border-top-color: #232526;
+}
+
+/* other links in the sidebarmenu */
+.skin-blue .main-sidebar .sidebar .sidebar-menu a{
+    background-color: #ffffff;
+    color: #333333;
+}
+
+/* other links in the sidebarmenu when hovered */
+.skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
+    background-color: #d6dde7;
+    color: #333333;
+    border-left-color: #203552;
+}
+/* toggle button when hovered  */   
+.skin-blue .main-header .navbar .sidebar-toggle{
+    color: #333333;
+}
+
+.skin-blue .main-header .navbar .sidebar-toggle:hover{
+    background-color: #ffffff;
+    color: #333333;
+}
+
+.skin-blue .box{
+	border-top-color: #777777;
+}
+
+.skin-blue .content-wrapper{
+	background-color: #fafcfd;
+    font-size: 15px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
