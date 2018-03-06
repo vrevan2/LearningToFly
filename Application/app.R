@@ -201,34 +201,49 @@ ui <- dashboardPage(
                 fluidRow(
                   conditionalPanel(
                     condition = "input.filter == 'Airlines'",
-                    box(title = "Number of Arrivals and Departures by Airlines for the month of January", width = 6,
+                    box(title = "Plot showing number of Arrivals and Departures by Airlines for the month of January", width = 6,
                         plotOutput("bar_airlines")
                     )
                   ),
                   conditionalPanel(
                     condition = "input.filter == 'Airlines'",
-                    box(title = "Number of Arrivals and Departures by Airlines for the month of January", width = 6,
+                    box(title = "Table of Number of Arrivals and Departures by Airlines for the month of January", width = 6,
                         dataTableOutput("table_airlines")
                     )
                   ),
                   conditionalPanel(
                     condition = "input.filter == 'Hours of Day'",
-                    box(title = "Number of Arrivals and Departures for each Hour of the Day for the month of January", width = 12,
-                        plotOutput("bar_hour"),
+                    box(title = "Plot showing Number of Arrivals and Departures for each Hour of the Day for the month of January", width = 6,
+                        plotOutput("bar_hour")
+                    )
+                  ),
+                  conditionalPanel(
+                    condition = "input.filter == 'Hours of Day'",
+                    box(title = "Table of Number of Arrivals and Departures for each Hour of the Day for the month of January", width = 6,
                         dataTableOutput("table_hour")
                     )
                   ),
                   conditionalPanel(
                     condition = "input.filter == 'Days of Week'",
-                    box(title = "Number of Arrivals and Departures for each Day of the Week for the month of January", width = 12,
-                        plotOutput("bar_day"),
+                    box(title = "Number of Arrivals and Departures for each Day of the Week for the month of January", width = 6,
+                        plotOutput("bar_day")
+                    )
+                  ),
+                  conditionalPanel(
+                    condition = "input.filter == 'Days of Week'",
+                    box(title = "Number of Arrivals and Departures for each Day of the Week for the month of January", width = 6,
                         dataTableOutput("table_day")
                     )
                   ),
                   conditionalPanel(
                     condition = "input.filter == 'Delays'",
-                    box(title = "Number of Delays for each hour of the day for the month of January", width = 12,
-                        plotOutput("bar_delay"),
+                    box(title = "Number of Delays for each hour of the day for the month of January", width = 6,
+                        plotOutput("bar_delay")
+                    )
+                  ),
+                  conditionalPanel(
+                    condition = "input.filter == 'Delays'",
+                    box(title = "Number of Delays for each hour of the day for the month of January", width = 6,
                         dataTableOutput("table_delay")
                     )
                   )
@@ -244,14 +259,14 @@ ui <- dashboardPage(
                     ),
                   tabPanel("Table: Most Common 15 Origin Airports",
                            fluidRow(
-                                 dataTableOutput("table_commonOriginAPort1"),
-                                 dataTableOutput("table_commonOriginAPort2")
+                             column( dataTableOutput("table_commonOriginAPort1"),width = 6),
+                             column( dataTableOutput("table_commonOriginAPort2"),width = 6)
                              )
                       ),
-                  tabPanel("Table: Most Common 15 Origin Airports",
+                  tabPanel("Table: Most Common 15 Destination Airports",
                            fluidRow(
-                             dataTableOutput("table_commonDestinationAPort1"),
-                             dataTableOutput("table_commonDestinationAPort2")
+                             column( dataTableOutput("table_commonDestinationAPort1"),width = 6),
+                             column( dataTableOutput("table_commonDestinationAPort2"),width = 6)
                            )
                   )
                    )
@@ -285,20 +300,24 @@ server <- function(input, output){
     },
     container = sketch,
     rownames = FALSE,
-    options = list(paging = FALSE, searching = FALSE, dom = 't')
+    options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
     )
   )
   
   # 15 most common origin airports
   output$common_originPorts <- renderPlot({
     ggplot(data = combineCommonDestAirports , aes(x = Origin, y = NoOfFlights, fill = Origin)) + geom_bar(stat = "identity") + facet_grid(~IATA) +
-      barplot_theme + labs(x = '', y = 'Number of Flights') + theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+      barplot_theme + labs(title = 'Most common 15 Origin Airports for Midway and O\'Hare International Airports',x = '', y = 'Number of Flights') + 
+      theme(legend.position = c(0.1, 0.9), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+      scale_fill_manual(labels = c("Midway (MDW)", "OHare (ORD)"), values = c('#5f7390','#b2908b'))
   })
   
   # 15 most common destination airports
   output$common_destinationPorts <- renderPlot({
     ggplot(data = combineCommonOriginAirports , aes(x = Destination, y = NoOfFlights, fill = Destination)) + geom_bar(stat = "identity") + facet_grid(~IATA) +
-      barplot_theme + labs(x = '', y = 'Number of Flights') + theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+      barplot_theme + labs(title = 'Most common 15 Destination Airports for Midway and O\'Hare International Airports',x = '', y = 'Number of Flights') + 
+      theme(legend.position = c(0.1, 0.9),axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+      scale_fill_manual(labels = c("Midway (MDW)", "OHare (ORD)"), values = c('#5f7390','#b2908b'))
   })
   
   # 15 most common origin airports for Airport1(ORD)
@@ -306,7 +325,8 @@ server <- function(input, output){
     DT::datatable({
       common15OriginAPort1
     },
-    options = list( searching = FALSE,columnDefs = list(list(visible = FALSE, targets = c(0,4)))))
+    caption = 'Most common 15 Origin Airports for O\'Hare International Airport',
+    options = list(paging = FALSE, searching = FALSE, dom = 't', searching = FALSE,order = list(list(1,'asc')),columnDefs = list(list(visible = FALSE, targets = c(0,4)))))
   )
   
   # 15 most common origin airports for Airport2(MDW)
@@ -314,7 +334,8 @@ server <- function(input, output){
     DT::datatable({
       common15OriginAPort2
     },
-    options = list( searching = FALSE,columnDefs = list(list(visible = FALSE, targets = c(0,4)))))
+    caption = 'Most common 15 Origin Airports for Midway International Airport',
+    options = list(paging = FALSE, searching = FALSE, dom = 't', searching = FALSE,order = list(list(1,'asc')),columnDefs = list(list(visible = FALSE, targets = c(0,4)))))
   )
   
   # 15 most common destination airports for Airport1(ORD)
@@ -322,7 +343,8 @@ server <- function(input, output){
     DT::datatable({
       common15DestAPort1
     },
-    options = list( searching = FALSE,columnDefs = list(list(visible = FALSE, targets = c(0,4)))))
+    caption = 'Most common 15 Destination Airports for O\'Hare International Airport',
+    options = list(paging = FALSE, searching = FALSE, dom = 't', searching = FALSE,order = list(list(1,'asc')),columnDefs = list(list(visible = FALSE, targets = c(0,4)))))
   )
   
   # 15 most common destination airports for Airport2(MDW)
@@ -330,7 +352,8 @@ server <- function(input, output){
     DT::datatable({
       common15DestAPort2
     },
-    options = list( searching = FALSE,columnDefs = list(list(visible = FALSE, targets = c(0,4)))))
+    caption = 'Most common 15 Destination Airports for Midway International Airport',
+    options = list(paging = FALSE, searching = FALSE, dom = 't', searching = FALSE,order = list(list(1,'asc')),columnDefs = list(list(visible = FALSE, targets = c(0,4)))))
   )
   
   # displaying text for the about section
