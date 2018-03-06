@@ -16,11 +16,15 @@ library(DT)
 defaultTz <- "America/Chicago"
 
 #### Functions
-adjustTime <- function (x) {
+adjustTime <- function(x) {
   formatC(x, width = 4, flag = "0")
 }
 
-toDateTime <- function (date, time, timezone) {
+toDateTime <- function(date, time, timezone) {
+  if(is.na(time) || time == '') {
+    return(NA)
+  }
+  
   result <- parse_date_time(paste(date, time), 
                             c("ymdHM", "%m-%d-%y %H%M", "%m/%d/%Y %H%M"), 
                             tz = timezone)
@@ -29,10 +33,10 @@ toDateTime <- function (date, time, timezone) {
 }
 
 ## Raw Data
-df <- read.csv("data/On_Time_Performance_2017_IL.csv", header = FALSE)
+df <- read.csv("data/On_Time_Performance_2017_IL_sample.csv", header = FALSE)
 colnames(df) <- as.character(read.table("data/OTP_Header.txt")[,1])
-df <- df[sample(nrow(df), 1000), 1:64] #### REMOVE the sampling in this line later
-# df <- df[1:52582, 1:64] #### REMOVE the sampling in this line later
+# df <- df[sample(nrow(df), 1000), 1:64] #### REMOVE the sampling in this line later
+df <- df[, 1:64] #### REMOVE the sampling in this line later
 
 ## Airport Info
 airports <- read.csv("data/airports_stations.csv")
