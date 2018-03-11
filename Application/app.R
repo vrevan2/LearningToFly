@@ -15,54 +15,12 @@ library(DT)
 #### Globals
 defaultTz <- "America/Chicago"
 
-#### Functions
-adjustTime <- function(x) {
-  formatC(x, width = 4, flag = "0")
-}
-
-toDateTime <- function(date, time, timezone) {
-  if(is.na(time) || time == '') {
-    return(NA)
-  }
-  
-  result <- parse_date_time(paste(date, time), 
-                            c("ymdHM", "%m-%d-%y %H%M", "%m/%d/%Y %H%M"), 
-                            tz = timezone)
-  result <- with_tz(result, tzone = defaultTz)
-  return(result)
-}
-
 ## Raw Data
-df <- read.csv("data/On_Time_Performance_2017_IL_sample.csv", header = FALSE)
-colnames(df) <- as.character(read.table("data/OTP_Header.txt")[,1])
-# df <- df[sample(nrow(df), 1000), 1:64] #### REMOVE the sampling in this line later
-df <- df[, 1:64] #### REMOVE the sampling in this line later
+df <- read.csv("data/OTP_2017.csv")
 
 ## Airport Info
 airports <- read.csv("data/airports_stations.csv")
 rownames(airports) <- as.character(airports$IATA)
-
-# Some time values should start with 0. e.g 328 should be 0328
-df$CRSDepTime <- adjustTime(df$CRSDepTime)
-df$CRSArrTime <- adjustTime(df$CRSArrTime)
-df$DepTime <- adjustTime(df$DepTime)
-df$ArrTime <- adjustTime(df$ArrTime)
-
-# Get Date Time Objects for scheduled and actual Departure and Arrivals
-df$CRSDepDateTime <- as_datetime(mapply(toDateTime, df$FlightDate, df$CRSDepTime, airports$AirportTimezone[df$Origin]), tz = defaultTz)
-df$CRSArrDateTime <- as_datetime(mapply(toDateTime, df$FlightDate, df$CRSArrTime, airports$AirportTimezone[df$Dest]), tz = defaultTz)
-df$DepDateTime <- as_datetime(mapply(toDateTime, df$FlightDate, df$DepTime, airports$AirportTimezone[df$Origin]), tz = defaultTz)
-df$ArrDateTime <- as_datetime(mapply(toDateTime, df$FlightDate, df$ArrTime, airports$AirportTimezone[df$Dest]), tz = defaultTz)
-
-# Bins
-df$CRSDepHourofDay <- hour(df$CRSDepDateTime)
-df$CRSDepMonthofYear <- month(df$CRSDepDateTime)
-df$CRSArrHourofDay <- hour(df$CRSArrDateTime)
-df$CRSArrMonthofYear <- month(df$CRSArrDateTime)
-df$DepHourofDay <- hour(df$DepDateTime)
-df$DepMonthofYear <- month(df$DepDateTime)
-df$ArrHourofDay <- hour(df$ArrDateTime)
-df$ArrMonthofYear <- month(df$ArrDateTime)
 
 #Airlines Lookup
 airlines <- read.csv("data/airlines.csv")
@@ -73,25 +31,15 @@ Airport2 = 'MDW'
 
 #### End of Global Variables Creation Section ####
 
-
-#### New Variables/Columns Declared : (Add declared Variables here)
-
-# dataset$DepDateTime, dataset$ArrDateTime -  Have NAs as the flights might be cancelled
-# dataset$OriginDateTime, dataset$DestDateTime - Scheduled Times, Always present
-# dataset$CRSArrHourofDay, ArrHourofDay , CRSDepHourofDay, DepHourofDay  - Range(0 - 23) , Non CRS ones have NA's due to same reason as above
-# dataset$CRSArrMonthofYear, ArrMonthofYear, CRSDepMonthofYear,  CRSDepMonthofYear - Range(1,12) , Non CRS ones have NA's due to same reason as above 
-
-####
-
 ######## Grade C (a) ########
 
-noArrDept <- data.frame("ArrMonthofYear" = df$ArrMonthofYear,"DeptMonthofYear" = df$DepMonthofYear,
-                        "AirlineID" = df$AirlineID, "Dest" = df$Dest, "Origin" = df$Origin)
+arrivalAirport1 <- subset(df, Month == month & Dest == Airport1)
+departureAirport1 <- subset(df, Month == month & Origin == Airport1)
 
-arrivalAPort1 <- data.frame(subset(noArrDept, ArrMonthofYear == 1 & Dest == 'ORD'))
-departureAPort1 <- data.frame(subset(noArrDept, DeptMonthofYear == 1 & Origin == 'ORD'))
+########
 
-arrivalAPort1 <- data.frame(table(arrivalAPort1$AirlineID))
+arrivalCountsByAirlineId <- count(arrivalAirport1$AirlineID)
+arrivalAPort1 <- data.frame(table(arrivalAirport1$AirlineID))
 colnames(arrivalAPort1) <- c('AirlineID','NoOfArrivals')
 departureAPort1 <- data.frame(table(departureAPort1$AirlineID))
 colnames(departureAPort1) <- c('AirlineID','NoOfDepartures')
@@ -100,8 +48,8 @@ APort1 <- merge(arrivalAPort1, departureAPort1, by = "AirlineID")
 APort1$Airport <- 'ORD'
 melt_APort1 <- melt(APort1, id.vars = 'AirlineID', measure.vars = c('NoOfArrivals', 'NoOfDepartures'))
 
-arrivalAPort2 <- data.frame(subset(noArrDept, ArrMonthofYear == 1 & Dest == 'MDW'))
-departureAPort2 <- data.frame(subset(noArrDept, ArrMonthofYear == 1 & Origin == 'MDW'))
+arrivalAPort2 <- data.frame(subset(noArrDept, Month == 1 & Dest == 'MDW'))
+departureAPort2 <- data.frame(subset(noArrDept, Month == 1 & Origin == 'MDW'))
 
 arrivalAPort2 <- data.frame(table(arrivalAPort2$AirlineID))
 colnames(arrivalAPort2) <- c('AirlineID','NoOfArrivals')
@@ -137,11 +85,12 @@ sketch = htmltools::withTags(table(
 
 
 ### 15 most common arrival and destination airports ####
-commonAirports <- data.frame("ArrMonthofYear" = df$ArrMonthofYear,"DeptMonthofYear" = df$DepMonthofYear,
-                             "Dest" = df$Dest, "Origin" = df$Origin)
+commonAirports <- data.frame("Month" = df$Month,
+                             "Dest" = df$Dest, 
+                             "Origin" = df$Origin)
 
 # Most common 15 Destination Airports
-commonDestinationAirportsAPort1 <- data.frame(subset(commonAirports, ArrMonthofYear == 1 & Origin == 'ORD'))
+commonDestinationAirportsAPort1 <- data.frame(subset(commonAirports, Month == 1 & Origin == 'ORD'))
 commonDestinationAirportsAPort1 <- data.frame(table(commonDestinationAirportsAPort1$Dest))
 commonDestinationAirportsAPort1 <- commonDestinationAirportsAPort1[order(-commonDestinationAirportsAPort1$Freq),]
 common15DestAPort1 <- head(commonDestinationAirportsAPort1,15)
@@ -150,7 +99,7 @@ colnames(common15DestAPort1) <- c('IATA','NoOfFlights','Origin')
 common15DestAPort1 <- merge(x = common15DestAPort1, y = airports[,c('AirportName','IATA')], by = 'IATA', all.x = TRUE)
 common15DestAPort1 <- common15DestAPort1[c(1,4,2,3)]
 
-commonDestinationAirportsAPort2 <- data.frame(subset(commonAirports, ArrMonthofYear == 1 & Origin == 'MDW'))
+commonDestinationAirportsAPort2 <- data.frame(subset(commonAirports, Month == 1 & Origin == 'MDW'))
 commonDestinationAirportsAPort2 <- data.frame(table(commonDestinationAirportsAPort2$Dest))
 commonDestinationAirportsAPort2 <- commonDestinationAirportsAPort2[order(-commonDestinationAirportsAPort2$Freq),]
 common15DestAPort2 <- head(commonDestinationAirportsAPort2,15)
@@ -162,7 +111,7 @@ common15DestAPort2 <- common15DestAPort2[c(1,4,2,3)]
 combineCommonDestAirports <- rbind(common15DestAPort1, common15DestAPort2)
 
 # Most common 15 Arrival Airports
-commonOriginAirportsAPort1 <- data.frame(subset(commonAirports, ArrMonthofYear == 1 & Dest == 'ORD'))
+commonOriginAirportsAPort1 <- data.frame(subset(commonAirports, Month == 1 & Dest == 'ORD'))
 commonOriginAirportsAPort1 <- data.frame(table(commonOriginAirportsAPort1$Origin))
 commonOriginAirportsAPort1 <- commonOriginAirportsAPort1[order(-commonOriginAirportsAPort1$Freq),]
 common15OriginAPort1 <- head(commonOriginAirportsAPort1,15)
@@ -171,7 +120,7 @@ colnames(common15OriginAPort1) <- c('IATA','NoOfFlights','Destination')
 common15OriginAPort1 <- merge(x = common15OriginAPort1, y = airports[,c('AirportName','IATA')], by = 'IATA', all.x = TRUE)
 common15OriginAPort1 <- common15OriginAPort1[c(1,4,2,3)]
 
-commonOriginAirportsAPort2 <- data.frame(subset(commonAirports, ArrMonthofYear == 1 & Dest == 'MDW'))
+commonOriginAirportsAPort2 <- data.frame(subset(commonAirports, Month == 1 & Dest == 'MDW'))
 commonOriginAirportsAPort2 <- data.frame(table(commonOriginAirportsAPort2$Origin))
 commonOriginAirportsAPort2 <- commonOriginAirportsAPort2[order(-commonOriginAirportsAPort2$Freq),]
 common15OriginAPort2 <- head(commonOriginAirportsAPort2,15)
@@ -186,12 +135,12 @@ combineCommonOriginAirports <- rbind(common15OriginAPort1, common15OriginAPort2)
 dfMonth<-df[df$Month == month,]
 
 dfMonthHoD<- dfMonth[dfMonth$Dest == Airport1 | dfMonth$Origin == Airport1| dfMonth$Dest == Airport2 | dfMonth$Origin == Airport2,]
-dfMonthHoD<-dfMonthHoD[,c('ArrHourofDay', 'DepHourofDay', 'Dest', 'Origin')]
+dfMonthHoD<-dfMonthHoD[,c('ArrHour', 'DepHour', 'Dest', 'Origin')]
 dfMonthHoD$airport <- ''
 dfMonthHoD<- na.omit(dfMonthHoD)
 dfMonthHoD[dfMonthHoD$Origin == Airport1 | dfMonthHoD$Dest == Airport1,]$airport <- 1
 dfMonthHoD[dfMonthHoD$Origin == Airport2 | dfMonthHoD$Dest == Airport2,]$airport <- 2
-dfMonthHoD<-data.frame('Arrivals' = dfMonthHoD$ArrHourofDay, 'Departures' = dfMonthHoD$DepHourofDay, 'airport' = dfMonthHoD$airport)
+dfMonthHoD<-data.frame('Arrivals' = dfMonthHoD$ArrHour, 'Departures' = dfMonthHoD$DepHour, 'airport' = dfMonthHoD$airport)
 dfMonthHoDMelt<-melt(dfMonthHoD, id='airport')
 dfMonthHoDMelt$airport <- ifelse(dfMonthHoDMelt$airport == 1, Airport1, Airport2)
 
@@ -210,7 +159,7 @@ dfMonthDoWMelt[dfMonthDoWMelt$value == 2,]$cat <- Airport2
 ### number of delays for hour of the day across a month
 
 dfdelay<-dfMonth[(dfMonth$Dest == Airport1 | dfMonth$Dest == Airport2) & dfMonth$ArrDelay > 0,]
-dfdelay<-dfdelay[,c('Dest','ArrDelay', 'CRSArrHourofDay')]
+dfdelay<-dfdelay[,c('Dest','ArrDelay', 'CRSArrHour')]
 
 
 ############## layout ################
@@ -409,7 +358,7 @@ server <- function(input, output){
   })
   
   output$bar_delay<- renderPlot({
-    ggplot(dfdelay, aes(x = Dest, fill = Dest)) + geom_bar(stat = 'count') + facet_grid(~ CRSArrHourofDay) + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())+
+    ggplot(dfdelay, aes(x = Dest, fill = Dest)) + geom_bar(stat = 'count') + facet_grid(~ CRSArrHour) + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())+
       labs(x='Hour of the Day', y='Count')
   })
   
@@ -429,13 +378,6 @@ server <- function(input, output){
 }#server
 
 shinyApp(ui = ui, server = server)
-
-
-
-
-
-
-
 
 
 
