@@ -6,7 +6,7 @@ library(tidyr)
 library(leaflet)
 library(jpeg)
 library(grid)
-
+library(dplyr)
 library(lubridate)
 library(reshape2)
 library(ggplot2)
@@ -38,18 +38,18 @@ departureAirport1 <- subset(df, Month == month & Origin == Airport1)
 
 ########
 
-arrivalCountsByAirlineId <- count(arrivalAirport1$AirlineID)
+arrivalCountsByAirlineId <- count(arrivalAirport1, arrivalAirport1$AirlineID)
 arrivalAPort1 <- data.frame(table(arrivalAirport1$AirlineID))
 colnames(arrivalAPort1) <- c('AirlineID','NoOfArrivals')
-departureAPort1 <- data.frame(table(departureAPort1$AirlineID))
+departureAPort1 <- data.frame(table(departureAirport1$AirlineID))
 colnames(departureAPort1) <- c('AirlineID','NoOfDepartures')
 
 APort1 <- merge(arrivalAPort1, departureAPort1, by = "AirlineID")
 APort1$Airport <- 'ORD'
 melt_APort1 <- melt(APort1, id.vars = 'AirlineID', measure.vars = c('NoOfArrivals', 'NoOfDepartures'))
 
-arrivalAPort2 <- data.frame(subset(noArrDept, Month == 1 & Dest == 'MDW'))
-departureAPort2 <- data.frame(subset(noArrDept, Month == 1 & Origin == 'MDW'))
+arrivalAPort2 <- data.frame(subset(df, Month == 1 & Dest == 'MDW'))
+departureAPort2 <- data.frame(subset(df, Month == 1 & Origin == 'MDW'))
 
 arrivalAPort2 <- data.frame(table(arrivalAPort2$AirlineID))
 colnames(arrivalAPort2) <- c('AirlineID','NoOfArrivals')
@@ -144,6 +144,29 @@ dfMonthHoD<-data.frame('Arrivals' = dfMonthHoD$ArrHour, 'Departures' = dfMonthHo
 dfMonthHoDMelt<-melt(dfMonthHoD, id='airport')
 dfMonthHoDMelt$airport <- ifelse(dfMonthHoDMelt$airport == 1, Airport1, Airport2)
 
+#for table
+Airport2Dep <- df %>% filter(Origin == Airport2 & Month == month) %>% count('hour' = DepHour)
+Airport1Dep <- df %>% filter(Origin == Airport1 & Month == month) %>% count('hour' = DepHour)
+Airport1Arr <- df %>% filter(Dest == Airport1 & Month == month) %>% count('hour' = ArrHour)
+Airport2Arr <- df %>% filter(Dest == Airport2 & Month == month) %>% count('hour' = ArrHour)
+Airport1ArrDep<-merge(Airport1Arr, Airport1Dep, by = 'hour', all = TRUE, suffixes = c('Arr', 'Dep'))
+Airport2ArrDep<-merge(Airport2Arr, Airport2Dep, by = 'hour', all = TRUE, suffixes = c('Arr', 'Dep'))
+tableArrDepByHour<-merge(Airport1ArrDep, Airport2ArrDep, by = 'hour', all = TRUE)
+
+sketchHour = htmltools::withTags(table(
+  class = 'display',
+  thead(
+    tr(
+      th(rowspan = 2, 'Hour of the Day'),
+      th(colspan = 2, 'Midway'),
+      th(colspan = 2, 'OHare')
+    ),
+    tr(
+      lapply(rep(c('Arrivals', 'Departures'), 2), th)
+    )
+  )
+))
+
 ### number of arrivals and departures for day of the week across a month
 dfMonthDoW<- dfMonth[dfMonth$Dest == Airport1 | dfMonth$Origin == Airport1| dfMonth$Dest == Airport2 | dfMonth$Origin == Airport2,]
 dfMonthDoW <- dfMonthDoW[,c('DayOfWeek', 'Dest', 'Origin')]
@@ -156,10 +179,33 @@ dfMonthDoWMelt$cat<-''
 dfMonthDoWMelt[dfMonthDoWMelt$value == 1,]$cat <- Airport1
 dfMonthDoWMelt[dfMonthDoWMelt$value == 2,]$cat <- Airport2
 
+##for table
+A2DepDay <- df %>% filter(Origin == Airport2 & Month == month) %>% count('Day' = DayOfWeek)
+A1DepDay <- df %>% filter(Origin == Airport1 & Month == month) %>% count('Day' = DayOfWeek)
+A1ArrDay <- df %>% filter(Dest == Airport1 & Month == month) %>% count('Day' = DayOfWeek)
+A2ArrDay <- df %>% filter(Dest == Airport2 & Month == month) %>% count('Day' = DayOfWeek)
+A1ArrDepDay<-merge(A1ArrDay, A1DepDay, by = 'Day', all = TRUE, suffixes = c('Arr', 'Dep'))
+A2ArrDepDay<-merge(A2ArrDay, A2DepDay, by = 'Day', all = TRUE, suffixes = c('Arr', 'Dep'))
+tableArrDepByDay<-merge(A1ArrDepDay, A2ArrDepDay, by = 'Day', all = TRUE)
+
+sketchDay = htmltools::withTags(table(
+  class = 'display',
+  thead(
+    tr(
+      th(rowspan = 2, 'Day of the Week'),
+      th(colspan = 2, 'Midway'),
+      th(colspan = 2, 'OHare')
+    ),
+    tr(
+      lapply(rep(c('Arrivals', 'Departures'), 2), th)
+    )
+  )
+))
+
 ### number of delays for hour of the day across a month
 
 dfdelay<-dfMonth[(dfMonth$Dest == Airport1 | dfMonth$Dest == Airport2) & dfMonth$ArrDelay > 0,]
-dfdelay<-dfdelay[,c('Dest','ArrDelay', 'CRSArrHour')]
+#dfdelay<-dfdelay[,c('Dest','ArrDelay', 'CRSArrHour')]
 
 
 ############## layout ################
@@ -361,6 +407,27 @@ server <- function(input, output){
     ggplot(dfdelay, aes(x = Dest, fill = Dest)) + geom_bar(stat = 'count') + facet_grid(~ CRSArrHour) + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())+
       labs(x='Hour of the Day', y='Count')
   })
+  
+  # table number of flights(arrivals and departures) by hour of the day
+  output$table_hour <- DT::renderDataTable(
+    DT::datatable({
+      tableArrDepByHour
+    },
+    container = sketchHour,
+    rownames = FALSE,
+    options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
+    )
+  )
+  # table number of flights(arrivals and departures) by day of the week
+  output$table_day <- DT::renderDataTable(
+    DT::datatable({
+      tableArrDepByDay
+    },
+    container = sketchDay,
+    rownames = FALSE,
+    options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
+    )
+  )
   
   # displaying text for the about section
   output$about_project <- renderUI({
