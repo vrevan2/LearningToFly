@@ -14,6 +14,19 @@ library(DT)
 
 #### Globals
 defaultTz <- "America/Chicago"
+hourFormat <- 12
+month <- 0
+Airport1 <- 'ORD'
+Airport2 <- 'MDW'
+temperatureFormat <- 'F'
+
+daysOfWeek <- c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+months <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+hours <- if(hourFormat == 24) c(0:23) else c(paste(c(0:11), "am"), "Noon", paste(c(1:11), "pm"))
+
+temperature <- function(x) {
+  return (if (temperatureFormat == 'F') x else (x - 32) * (5 / 9))
+}
 
 ## Raw Data
 df <- read.csv("data/OTP_2017.csv")
@@ -25,18 +38,75 @@ rownames(airports) <- as.character(airports$IATA)
 #Airlines Lookup
 airlines <- read.csv("data/airlines.csv")
 
-month = 1
-Airport1 = 'ORD'
-Airport2 = 'MDW'
-
 #### End of Global Variables Creation Section ####
 
 ######## Grade C (a) ########
 
-arrivalAirport1 <- subset(df, Month == month & Dest == Airport1)
-departureAirport1 <- subset(df, Month == month & Origin == Airport1)
+### Heatmaps ###
+getHourDayHeatMap <- function(sourceData, hourColname) {
+  baseData <- expand.grid(0:23, 1:7)
+  colnames(baseData) <- c('Hour', 'DayOfWeek')
+  
+  data <- merge(baseData, sourceData, # get values for all permutations of hour and dayofweek
+                by.x = c('Hour', 'DayOfWeek'), 
+                by.y = c(hourColname, 'DayOfWeek'),
+                all = TRUE)
+  data[which(is.na(data[,3]), arr.ind=TRUE), 3] <- 0 # update NAs to 0
+  data <- arrange(data, Hour, DayOfWeek) # order by hour, dayofweek
+  data <- matrix(data$n, nrow = 7, ncol = 24, dimnames = list(daysOfWeek, hours) ) # convert to matrix
+  return(plot_ly(x = hours, y = daysOfWeek, z = data, type = "heatmap")) # plot
+}
 
-########
+getHourMonthHeatMap <- function(sourceData, hourColname) {
+  baseData <- expand.grid(0:23, 1:12)
+  colnames(baseData) <- c('Hour', 'Month')
+  
+  data <- merge(baseData, sourceData, # get values for all permutations of hour and dayofweek
+                by.x = c('Hour', 'Month'), 
+                by.y = c(hourColname, 'Month'),
+                all = TRUE)
+  data[which(is.na(data[,3]), arr.ind=TRUE), 3] <- 0 # update NAs to 0
+  data <- arrange(data, Hour, Month) # order by hour, dayofweek
+  data <- matrix(data$n, nrow = 12, ncol = 24, dimnames = list(months, hours) ) # convert to matrix
+  return(plot_ly(x = hours, y = months, z = data, type = "heatmap")) # plot
+}
+
+##  by Day of week vs. Time of day
+departureAirport1 <- subset(df, (if (month == 0) TRUE else Month == month) 
+                            & Origin == Airport1 & CancellationCode == '')
+plot <- getHourDayHeatMap(count(departureAirport1, DepHour, DayOfWeek), 'DepHour') # Departures
+
+arrivalAirport1 <- subset(df, (if (month == 0) TRUE else Month == month) 
+                          & Dest == Airport1 & CancellationCode == '')
+plot <- getHourDayHeatMap(count(arrivalAirport1, ArrHour, DayOfWeek), 'ArrHour') # Arrivals
+
+delays <- subset(df, (if (month == 0) TRUE else Month == month) 
+                 & (Origin == Airport1 | Dest == Airport1)
+                 & (CarrierDelay > 0 | WeatherDelay > 0 | NASDelay > 0 
+                    | SecurityDelay > 0 | LateAircraftDelay > 0))
+plot <- getHourDayHeatMap(count(delays, ArrHour, DayOfWeek), 'ArrHour') # Delays
+
+cancellations <- subset(df, (if (month == 0) TRUE else Month == month) 
+                        & (Origin == Airport1 | Dest == Airport1) & CancellationCode != '')
+plot <- getHourDayHeatMap(count(cancellations, CRSDepHour, DayOfWeek), 'CRSDepHour') # Delays
+
+
+##  by Month of year vs. Time of day
+departureAirport1 <- subset(df, Origin == Airport1 & CancellationCode == '')
+plot <- getHourMonthHeatMap(count(departureAirport1, DepHour, Month), 'DepHour') # Departures
+
+arrivalAirport1 <- subset(df, Dest == Airport1 & CancellationCode == '')
+plot <- getHourMonthHeatMap(count(arrivalAirport1, ArrHour, Month), 'ArrHour') # Arrivals
+
+delays <- subset(df, (Origin == Airport1 | Dest == Airport1)
+                 & (CarrierDelay > 0 | WeatherDelay > 0 | NASDelay > 0 
+                    | SecurityDelay > 0 | LateAircraftDelay > 0))
+plot <- getHourMonthHeatMap(count(delays, ArrHour, Month), 'ArrHour') # Delays
+
+cancellations <- subset(df, (Origin == Airport1 | Dest == Airport1) & CancellationCode != '')
+plot <- getHourMonthHeatMap(count(cancellations, CRSDepHour, Month), 'CRSDepHour') # Delays
+
+
 
 arrivalCountsByAirlineId <- count(arrivalAirport1, arrivalAirport1$AirlineID)
 arrivalAPort1 <- data.frame(table(arrivalAirport1$AirlineID))
@@ -445,13 +515,3 @@ server <- function(input, output){
 }#server
 
 shinyApp(ui = ui, server = server)
-
-
-
-
-
-
-
-
-
-
