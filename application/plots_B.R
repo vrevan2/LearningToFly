@@ -60,15 +60,16 @@ APort1 <-merge(APort1,airlines, by = "AirlineID")
 
 
 APort1 <- na.omit(APort1)
+APort1 <- arrange(APort1, AirlineID, Month)
 
 p <- gapminder %>%
   plot_ly(
-    x = APort1$AirlineCode, 
+    x = APort1$Month, 
     y = APort1$Freq.x, 
-    frame = APort1$Month, 
+    frame = as.character(APort1$AirlineCode), 
     type = 'bar'  ) %>% 
-    add_trace(y = APort1$Freq.y ) %>%
-  layout( barmode = 'stack')
+    add_trace(y = APort1$Freq.y) %>%
+  layout( barmode = 'stack') 
 
 p
 
@@ -88,12 +89,12 @@ APort1[is.na(APort1)]<-0
 
 p <- gapminder %>%
   plot_ly(
-    x = APort1$Hour, 
+    x = APort1$Month, 
     y = APort1$Freq.x, 
-    frame = APort1$Month, 
-    type = 'bar'  ) %>% 
-    add_trace(y = APort1$Freq.y ) %>%
-  layout( barmode = 'stack')
+    frame = APort1$Hour, 
+    mode = 'lines',
+    type = 'scatter'  ) %>% 
+    add_trace(y = APort1$Freq.y, mode = 'lines' )
 
 p
 
@@ -114,9 +115,9 @@ top15Dest<-na.omit(top15Dest)
 
 p <- gapminder %>%
   plot_ly(
-    x = top15Dest$Dest, 
+    x = top15Dest$Month, 
     y = top15Dest$Freq, 
-    frame = top15Dest$Month, 
+    frame = as.character(top15Dest$Dest), 
     type = 'bar'  )
 
 p

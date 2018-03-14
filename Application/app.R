@@ -9,13 +9,12 @@ library(grid)
 library(dplyr)
 library(lubridate)
 library(reshape2)
-library(ggplot2)
 library(DT)
 
 #### Globals
 defaultTz <- "America/Chicago"
 hourFormat <- 12
-month <- 0
+month <- 1
 Airport1 <- 'ORD'
 Airport2 <- 'MDW'
 temperatureFormat <- 'F'
@@ -208,6 +207,9 @@ dfMonthHoD<- dfMonth[dfMonth$Dest == Airport1 | dfMonth$Origin == Airport1| dfMo
 dfMonthHoD<-dfMonthHoD[,c('ArrHour', 'DepHour', 'Dest', 'Origin')]
 dfMonthHoD$airport <- ''
 dfMonthHoD<- na.omit(dfMonthHoD)
+
+
+
 dfMonthHoD[dfMonthHoD$Origin == Airport1 | dfMonthHoD$Dest == Airport1,]$airport <- 1
 dfMonthHoD[dfMonthHoD$Origin == Airport2 | dfMonthHoD$Dest == Airport2,]$airport <- 2
 dfMonthHoD<-data.frame('Arrivals' = dfMonthHoD$ArrHour, 'Departures' = dfMonthHoD$DepHour, 'airport' = dfMonthHoD$airport)
