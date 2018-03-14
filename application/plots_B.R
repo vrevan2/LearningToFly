@@ -39,7 +39,7 @@ AID = 0 ## User Selectable Variable
 
 ######## Grade B ########
 
-library('plyr')
+library(dplyr)
 library(plotly)
 library(gapminder)
 
@@ -51,8 +51,8 @@ departureAPort1 <- subset(df,  Origin == Airport1)
 
 
 
-noArrAport1 <-count(arrivalAPort1 ,  c('Month' , 'AirlineID'))
-noDepAport1 <-count(departureAPort1 ,  c('Month' , 'AirlineID'))
+noArrAport1 <-count(arrivalAPort1 ,  Month , AirlineID)
+noDepAport1 <-count(departureAPort1 ,  Month , AirlineID)
 colnames(noArrAport1)<-c("Month", "AirlineID" , "Freq" )
 colnames(noDepAport1)<-c("Month", "AirlineID" , "Freq" )
 APort1 <- merge(noArrAport1, noDepAport1, by = c("AirlineID","Month") , all.x=TRUE , all.y =TRUE)
@@ -76,8 +76,8 @@ p
 ### Number of Arrivals and Departures Hour of Day
 
 
-noArrAport1 <-count(arrivalAPort1 ,  c('Month' , 'ArrHour'))
-noDepAport1 <-count(departureAPort1 ,  c('Month' , 'DepHour'))
+noArrAport1 <-count(arrivalAPort1 ,  Month , ArrHour)
+noDepAport1 <-count(departureAPort1 ,  Month , DepHour)
 colnames(noArrAport1)<-c("Month", "Hour" , "Freq" )
 colnames(noDepAport1)<-c("Month", "Hour" , "Freq" )
 
@@ -101,14 +101,15 @@ p
 #### 15 Common Destination Number over Month 
 
 
-top15Dest <-count(departureAPort1 ,  c('Dest'))
-top15Dest <-top15Dest[order(-top15Dest$freq) , ]
-top15Dest <- head(top15Dest , 15)
+top15Dest <-count(departureAPort1 ,  Dest)
 colnames(top15Dest)<-c('Dest','Total')
+top15Dest <-top15Dest[order(-top15Dest$Total) , ]
+top15Dest <- head(top15Dest , 15)
+
 top15Dest
 top15DestData <- merge(departureAPort1, top15Dest , by = "Dest" , all = FALSE)
 
-top15Dest <- count(top15DestData ,  c('Dest' , 'Month'))
+top15Dest <- count(top15DestData ,  Dest , Month)
 colnames(top15Dest)<-c('Dest', 'Month' , 'Freq')
 
 top15Dest<-na.omit(top15Dest)
@@ -127,24 +128,24 @@ p
 delaysdata  <- subset(df,  Dest == Airport1 | Origin == Airport1)
 
 delays_NAS <- delaysdata[delaysdata$NASDelay!=0 & !is.na(delaysdata$NASDelay),]
-delays_NAS <- count(delays_NAS , c('Month'))
+delays_NAS <- count(delays_NAS , Month)
 colnames(delays_NAS)<-c("Month" , "NAS")
 
 delays_Security <- delaysdata[delaysdata$SecurityDelay!=0 & !is.na(delaysdata$SecurityDelay),]
-delays_Security <- count(delays_Security , c('Month'))
+delays_Security <- count(delays_Security , Month)
 colnames(delays_Security)<-c("Month" , "Security")
 
 delays_Weather <- delaysdata[delaysdata$WeatherDelay!=0 & !is.na(delaysdata$WeatherDelay),]
-delays_Weather <- count(delays_Weather , c('Month'))
+delays_Weather <- count(delays_Weather , Month)
 colnames(delays_Weather)<-c("Month" , "Weather")
 
 delays_Carrier <- delaysdata[delaysdata$CarrierDelay!=0 & !is.na(delaysdata$CarrierDelay),]
-delays_Carrier <- count(delays_Carrier , c('Month'))
+delays_Carrier <- count(delays_Carrier , Month)
 colnames(delays_Carrier)<-c("Month" , "Carrier")
 
 
 delays_LateAircraftDelay <- delaysdata[delaysdata$LateAircraftDelay!=0 & !is.na(delaysdata$LateAircraftDelay),]
-delays_LateAircraftDelay <- count(delays_LateAircraftDelay , c('Month'))
+delays_LateAircraftDelay <- count(delays_LateAircraftDelay , Month)
 colnames(delays_LateAircraftDelay)<-c("Month" , "LAD")
 
 
@@ -171,17 +172,17 @@ p
 ###### Plots A ######
 
 ### Top 50 Lists ###
-top50pairs <-count(arrivalAPort1 , c('Origin'))
+top50pairs <-count(arrivalAPort1 , Origin)
 
-top50 <- top50pairs[order(-top50pairs$freq),]
+top50 <- top50pairs[order(-top50pairs$n),]
 
 top50pairs <- head(top50, 50)
 
 top50aiports<-unique(as.character(top50pairs$Origin))
 
-top50pairs <-count(departureAPort1, c('Dest'))
+top50pairs <-count(departureAPort1, Dest)
 
-top50 <- top50pairs[order(-top50pairs$freq),]
+top50 <- top50pairs[order(-top50pairs$n),]
 
 top50pairs <- head(top50, 50)
 
@@ -193,8 +194,8 @@ Airport2 ="BOS" ## User Selectable Variable
 pair_dep <-  subset( arrivalAPort1 , Origin ==Airport2)
 pair_arr <- subset( departureAPort1,  Dest == Airport2)
 
-noArrAport1 <-count(pair_arr ,  c('Month' , 'ArrHour'))
-noDepAport1 <-count(pair_dep ,  c('Month' , 'DepHour'))
+noArrAport1 <-count(pair_arr ,  Month , ArrHour)
+noDepAport1 <-count(pair_dep ,  Month , DepHour)
 colnames(noArrAport1)<-c("Month", "Hour" , "Freq" )
 colnames(noDepAport1)<-c("Month", "Hour" , "Freq" )
 
@@ -223,8 +224,8 @@ airline_arr <- subset(arrivalAPort1 , AirlineID == AID)
 airline_dep <- subset(departureAPort1 , AirlineID == AID)
 
 
-noArrAport1 <-count(airline_arr ,  c('Month' , 'ArrHour'))
-noDepAport1 <-count(airline_dep ,  c('Month' , 'DepHour'))
+noArrAport1 <-count(airline_arr ,  Month , ArrHour)
+noDepAport1 <-count(airline_dep ,  Month , DepHour)
 colnames(noArrAport1)<-c("Month", "Hour" , "Freq" )
 colnames(noDepAport1)<-c("Month", "Hour" , "Freq" )
 
@@ -255,8 +256,8 @@ month_i = month(date)
 
 user_arr <-subset(arrivalAPort1 , DayofMonth== day_i &Month == month_i)
 user_dep <- subset(departureAPort1,  DayofMonth== day_i &Month == month_i)
-noArrAport1 <-count(user_arr ,  c('ArrHour'))
-noDepAport1 <-count(user_dep ,  c( 'DepHour'))
+noArrAport1 <-count(user_arr ,  ArrHour)
+noDepAport1 <-count(user_dep ,  DepHour)
 colnames(noArrAport1)<-c("Hour" , "Freq" )
 colnames(noDepAport1)<-c("Hour" , "Freq" )
 
@@ -286,24 +287,24 @@ delay_type = "NAS"  ## User Selectable Variable
 delaysdata  <- subset(df,  Dest == Airport1 | Origin == Airport1)
 
 delays_NAS <- delaysdata[delaysdata$NASDelay!=0 & !is.na(delaysdata$NASDelay),]
-delays_NAS <- count(delays_NAS , c('Month' , 'ArrHour'))
+delays_NAS <- count(delays_NAS , Month , ArrHour)
 colnames(delays_NAS)<-c('Month' , 'ArrHour', "NAS")
 
 delays_Security <- delaysdata[delaysdata$SecurityDelay!=0 & !is.na(delaysdata$SecurityDelay),]
-delays_Security <- count(delays_Security , c('Month' , 'ArrHour'))
+delays_Security <- count(delays_Security , Month , ArrHour)
 colnames(delays_Security)<-c('Month' , 'ArrHour', "Security")
 
 delays_Weather <- delaysdata[delaysdata$WeatherDelay!=0 & !is.na(delaysdata$WeatherDelay),]
-delays_Weather <- count(delays_Weather , c('Month' , 'ArrHour'))
+delays_Weather <- count(delays_Weather , Month , ArrHour)
 colnames(delays_Weather)<-c('Month' , 'ArrHour', "Weather")
 
 delays_Carrier <- delaysdata[delaysdata$CarrierDelay!=0 & !is.na(delaysdata$CarrierDelay),]
-delays_Carrier <- count(delays_Carrier , c('Month' , 'ArrHour'))
+delays_Carrier <- count(delays_Carrier , Month , ArrHour)
 colnames(delays_Carrier)<-c('Month' , 'ArrHour', "Carrier")
 
 
 delays_LateAircraftDelay <- delaysdata[delaysdata$LateAircraftDelay!=0 & !is.na(delaysdata$LateAircraftDelay),]
-delays_LateAircraftDelay <- count(delays_LateAircraftDelay , c('Month' , 'ArrHour'))
+delays_LateAircraftDelay <- count(delays_LateAircraftDelay , Month , ArrHour)
 colnames(delays_LateAircraftDelay)<-c('Month' , 'ArrHour', "LAD")
 
 
@@ -333,8 +334,8 @@ user_arr <-subset(arrivalAPort1 , DayOfWeek== dow_i )
 user_dep <- subset(departureAPort1,  DayOfWeek== dow_i )
 
 
-noArrAport1 <-count(user_arr ,  c('Month' , 'ArrHour'))
-noDepAport1 <-count(user_dep ,  c('Month' , 'DepHour'))
+noArrAport1 <-count(user_arr ,  Month , ArrHour)
+noDepAport1 <-count(user_dep ,  Month , DepHour)
 colnames(noArrAport1)<-c("Month", "Hour" , "Freq" )
 colnames(noDepAport1)<-c("Month", "Hour" , "Freq" )
 
