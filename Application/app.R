@@ -1,20 +1,47 @@
 library(shiny)
 library(shinydashboard)
 library(plotly)
-library(dplyr)
+library(plyr)
 library(reshape2) ##??
 library(DT)
 
 #### Globals
 defaultTz <- "America/Chicago"
-is24Hour <- TRUE
+is24Hour <- FALSE
 isMetric <- FALSE
 
 daysOfWeek <- c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+daysOfWeekDf <- data.frame(daysOfWeek, c(1:7))
+colnames(daysOfWeekDf) <- c("DayName", "DayNumber")
+
 months <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-monthsDf <- data.frame(months,c(1:12))
-colnames(monthsDf) <- c("Name", "Number")
-hours <- if(is24Hour) c(0:23) else c(paste(c(0:11), "am"), "Noon", paste(c(1:11), "pm"))
+monthsDf <- data.frame(months, c(1:12))
+colnames(monthsDf) <- c("MonthName", "MonthNumber")
+
+times <- c(paste(c(0:4), 'to', c(1:5), 'hr'), '5 hr or more')
+timesDf <- data.frame(times, c(0:5))
+colnames(timesDf) <- c("TimeName", "TimeNumber")
+
+hours <- function() {
+  return(if(is24Hour) c(0:23) else c(paste(c(0:11), "am"), "Noon", paste(c(1:11), "pm")))
+}
+hoursDf <- function() {
+  hdf <- data.frame(hours(), c(0:23))
+  colnames(hdf) <- c("HourName", "HourNumber")
+  return(hdf)
+}
+
+distanceGroups <- function(){
+  return(if(isMetric)
+    c(paste(c(0:7) * 400, 'to', c(1:8) * 400 - 1, "km"), '3200+ km')
+    else
+      c(paste(c(0:7) * 250, 'to', c(1:8) * 250 - 1, "miles"), '2000+ miles'))
+}
+distanceGroupDf <- function() {
+  dgdf <- data.frame(distanceGroups(), c(0:8))
+  colnames(dgdf) <- c('DistanceName', 'DistanceNumber')
+  return(dgdf)
+}
 
 temperature <- function(x) {
   return (if (temperatureFormat == 'F') x else (x - 32) * (5 / 9))
@@ -65,6 +92,9 @@ rownames(airports) <- as.character(airports$IATA)
 
 # Flight Data
 flights <- read.csv("data/OTP_2017.csv")
+flights$DistanceGroup <- flights$DistanceGroup - 1 # convert 1:n to 0:n-1
+flights$CRSElapsedTimeGroup[flights$CRSElapsedTimeGroup > 5] <- 5 # bin times more than 5 hrs into one group
+flights$DistanceGroup[flights$DistanceGroup > 8] <- 8 # bin times more than 2000 miles into one group
 cancellations <- flights[flights$CancellationCode != '',]
 flights <- flights[flights$CancellationCode == '',]
 
@@ -96,20 +126,21 @@ ui <- dashboardPage(
         fluidRow(
           column(width = 4, selectInput("flightDataAirport1", "Airport 1", airportList, width = '100%', selected = 'ORD')),
           column(width = 4, selectInput("flightDataAirport2", "Airport 2", airportList, width = '100%', selected = 'MDW')),
-          column(width = 1, checkboxInput("compareFlightData", "Compare")),
-          column(width = 1, checkboxInput("stackedFlightData", "Stacked")),
+          column(width = 1, checkboxInput("flightDataCompare", "Compare")),
+          column(width = 1, checkboxInput("flightDataStacked", "Stacked_Bars")),
           column(width = 1, offset = 1, actionButton("arrivalDepartureData", "Show Data"))),
         fluidRow(tabBox(
           id = "flightDataTabs",
           width = 12,
           tabPanel(
             "Number of Flights",
-            radioButtons("noOfFlightsBy", "Plot by", inline = TRUE, c("Airline", "Hour", "Day of the Week", "Flight Time", "Distance")),
-            plotOutput("flightDataNumberOfFlights")
+            radioButtons("noOfFlightsBy", "Plot by", inline = TRUE, 
+                         c("Airline" = "airline", "Hour" = "hour", "Day of the Week" = "day", "Flight Time" = "time", "Distance" = "distance")),
+            plotlyOutput("flightDataNumberOfFlights")
           ),
           tabPanel(
             "Number of Delays",
-            plotOutput("flightDataNumberOfFlights")
+            plotlyOutput("flightDataNumberOfDelays")
           )
         ))
       ),#tabItem
@@ -138,54 +169,79 @@ ui <- dashboardPage(
       )#tabItem
 )))
 
-# server
-server <- function(input, output){
-  
-  getCounts <- function (data, groupBy) {
-    counts <- count(data, Month, groupBy)
-    colnames(counts) <- c(groupBy, "")
-    return(counts)
+flightDataNoOfFlights <- function(pref, airport, stacked) {
+  byGroup <- c("Month", switch(pref,
+                               "airline" = 'AirlineID',
+                               "hour" = 'ArrHour',
+                               "day" = 'DayOfWeek',
+                               "time" = 'CRSElapsedTimeGroup',
+                               "distance" = 'DistanceGroup'))
+  arrival1 <- count(subset(flights, Dest == airport), byGroup)
+  colnames(arrival1) <- c(byGroup, "Frequency")
+  departure1 <- count(subset(flights, Origin == airport), byGroup)
+  colnames(departure1) <- c(byGroup, "Frequency")
+  arrDep1 <- merge(arrival1, departure1, by = byGroup, all.x = TRUE, all.y = TRUE)
+  arrDep1 <- merge(arrDep1, monthsDf, by.x = "Month",  by.y = "MonthNumber")
+  arrDep1$MonthName <- ordered(arrDep1$MonthName, months)
+  if(pref == 'airline') {
+    arrDep1 <- merge(arrDep1, airlines, by = "AirlineID", all.x = TRUE)
   }
-
-  byAirline <- c("Month", "AirlineID")
-  arrival1 <- count(subset(flights, Dest == 'ORD'), Month, AirlineID)
-  colnames(arrival1) <- c(byAirline, "Frequency")
-  departure1 <- count(subset(flights, Origin == 'ORD'), Month, AirlineID)
-  colnames(departure1) <- c(byAirline, "Frequency")
-  arrDep1 <- merge(arrival1, departure1, by = byAirline, all.x=TRUE, all.y =TRUE)
-  arrDep1 <- merge(arrDep1, monthsDf, by.x = "Month",  by.y = "Number")
-  arrDep1 <- merge(arrDep1, airlines, by = "AirlineID")
+  if(pref == 'hour') {
+    arrDep1 <- merge(arrDep1, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')
+    arrDep1$HourName <- ordered(arrDep1$HourName, hours())
+  }
+  if(pref == 'day') {
+    arrDep1 <- merge(arrDep1, daysOfWeekDf, by.x = 'DayOfWeek', by.y = 'DayNumber')
+    arrDep1$DayName <- ordered(arrDep1$DayName, daysOfWeek)
+  }
+  if(pref == 'time') {
+    arrDep1 <- merge(arrDep1, timesDf, by.x = 'CRSElapsedTimeGroup', by.y = 'TimeNumber')
+    arrDep1$TimeName <- ordered(arrDep1$TimeName, times)
+  }
+  if(pref == 'distance') {
+    arrDep1 <- merge(arrDep1, distanceGroupDf(), by.x = 'DistanceGroup', by.y = 'DistanceNumber')
+    arrDep1$DistanceName <- ordered(arrDep1$DistanceName, distanceGroups())
+  }
+  arrDep1[is.na(arrDep1)] <- 0
   
-  arrDepPlot1 <- plot_ly(
-    x = as.character(arrDep1$AirlineCode), 
+  txt <- switch(pref,
+                "airline" = as.character(arrDep1$AirlineName),
+                "hour" = arrDep1$HourName,
+                "day" = arrDep1$DayName,
+                "time" = arrDep1$TimeName,
+                "distance" = arrDep1$DistanceName)
+  
+  return (plot_ly(
+    x = switch(pref,
+               "airline" = as.character(arrDep1$AirlineCode),
+               "hour" = arrDep1$HourName,
+               "day" = arrDep1$DayName,
+               "time" = arrDep1$TimeName,
+               "distance" = arrDep1$DistanceName), 
     y = arrDep1$Frequency.x, 
-    frame = paste(format(arrDep1$Month, width = 2), '-', arrDep1$Name),
-    text = paste(arrDep1$AirlineName, '; Arrivals:', arrDep1$Frequency.x),
+    frame = arrDep1$MonthName,
+    text = paste(txt, '\nArrivals:', arrDep1$Frequency.x),
     hoverinfo = 'text',
     name = 'Arrivals',
     type = 'bar') %>%
     add_trace(y = arrDep1$Frequency.y,
-              text = paste(arrDep1$AirlineName, '; Departures:', arrDep1$Frequency.y),
+              text = paste(txt, '\nDepartures:', arrDep1$Frequency.y),
               hoverinfo = 'text',
-              name = 'Departures')
+              name = 'Departures') %>%
+    layout(barmode = if(stacked) 'stack'))
+}
+
+# server
+server <- function(input, output){
   
-  arrival2 <- getCounts(subset(flights, Dest == input$flightDataAirport2), byAirline)
-  departure2 <- getCounts(subset(flights, Origin == input$flightDataAirport2), byAirline)
-  arrDep2 <- merge(arrival2, departure1, by = byAirline, all.x=TRUE, all.y =TRUE)
-  arrDep2 <- merge(arrDep2, airlines, by = "AirlineID")
-  
-  arrDepPlot2 <- plot_ly(
-    x = arrDep2$AirlineID, 
-    y = arrDep2$Frequency.x, 
-    frame = arrDep2$Month,
-    type = 'bar') %>%
-    add_trace(y = arrDep2$Freq.y ) %>%
-    layout( barmode = 'stack')
-  
-  output$flightDataNumberOfFlights = 
-    renderPlot(
-        subplot(arrDepPlot1, arrDepPlot2, shareY = input$compareFlightData)
-    )
+  output$flightDataNumberOfFlights <- renderPlotly({
+    subplot(
+      flightDataNoOfFlights(input$noOfFlightsBy, input$flightDataAirport1, input$flightDataStacked),
+      flightDataNoOfFlights(input$noOfFlightsBy, input$flightDataAirport2, input$flightDataStacked),
+      shareY = input$flightDataCompare
+    ) %>%
+    layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
+  })
 }
 
 shinyApp(ui = ui, server = server)
