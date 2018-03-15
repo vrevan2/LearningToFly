@@ -122,7 +122,7 @@ ui <- dashboardPage(
       tabItem("home", includeHTML("home.html")),
       tabItem(
         "flightData",
-        fluidRow(column(width = 12, h2('Number of Arrivals and Departures'))),
+        fluidRow(column(width = 12, h2('Number of Arrivals, Departures and Delays'))),
         fluidRow(
           column(width = 4, selectInput("flightDataAirport1", "Airport 1", airportList, width = '100%', selected = 'ORD')),
           column(width = 4, selectInput("flightDataAirport2", "Airport 2", airportList, width = '100%', selected = 'MDW')),
@@ -140,9 +140,6 @@ ui <- dashboardPage(
           ),
           tabPanel(
             "Number of Delays",
-            selectInput("top15", "Type", 
-                        c("All Stacked", "All Combined", "Carrier Delay", "Weather Delay", "NAS Delay","Security Delay", "Late Aircraft Delay"),
-                        width = '50%', selected = 'All Stacked'),
             plotlyOutput("flightDataNumberOfDelays")
           )
         ))
@@ -182,7 +179,7 @@ ui <- dashboardPage(
                 box(title = "Flights to and from different states within US", width = 12)
               )
       )#tabItem 
-)))
+    )))
 
 flightDataNoOfFlights <- function(pref, airport, stacked) {
   byGroup <- c("Month", switch(pref,
@@ -191,71 +188,164 @@ flightDataNoOfFlights <- function(pref, airport, stacked) {
                                "day" = 'DayOfWeek',
                                "time" = 'CRSElapsedTimeGroup',
                                "distance" = 'DistanceGroup'))
-  arrival1 <- count(subset(flights, Dest == airport), byGroup)
-  colnames(arrival1) <- c(byGroup, "Frequency")
-  departure1 <- count(subset(flights, Origin == airport), byGroup)
-  colnames(departure1) <- c(byGroup, "Frequency")
-  arrDep1 <- merge(arrival1, departure1, by = byGroup, all.x = TRUE, all.y = TRUE)
-  arrDep1 <- merge(arrDep1, monthsDf, by.x = "Month",  by.y = "MonthNumber")
-  arrDep1$MonthName <- ordered(arrDep1$MonthName, months)
+  arrival <- count(subset(flights, Dest == airport), byGroup)
+  colnames(arrival) <- c(byGroup, "Frequency")
+  departure <- count(subset(flights, Origin == airport), byGroup)
+  colnames(departure) <- c(byGroup, "Frequency")
+  arrDep <- merge(arrival, departure, by = byGroup, all.x = TRUE, all.y = TRUE)
+  arrDep <- merge(arrDep, monthsDf, by.x = "Month",  by.y = "MonthNumber")
+  arrDep$MonthName <- ordered(arrDep$MonthName, months)
   if(pref == 'airline') {
-    arrDep1 <- merge(arrDep1, airlines, by = "AirlineID", all.x = TRUE)
+    arrDep <- merge(arrDep, airlines, by = "AirlineID", all.x = TRUE)
   }
   if(pref == 'hour') {
-    arrDep1 <- merge(arrDep1, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')
-    arrDep1$HourName <- ordered(arrDep1$HourName, hours())
+    arrDep <- merge(arrDep, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')
+    arrDep$HourName <- ordered(arrDep$HourName, hours())
   }
   if(pref == 'day') {
-    arrDep1 <- merge(arrDep1, daysOfWeekDf, by.x = 'DayOfWeek', by.y = 'DayNumber')
-    arrDep1$DayName <- ordered(arrDep1$DayName, daysOfWeek)
+    arrDep <- merge(arrDep, daysOfWeekDf, by.x = 'DayOfWeek', by.y = 'DayNumber')
+    arrDep$DayName <- ordered(arrDep$DayName, daysOfWeek)
   }
   if(pref == 'time') {
-    arrDep1 <- merge(arrDep1, timesDf, by.x = 'CRSElapsedTimeGroup', by.y = 'TimeNumber')
-    arrDep1$TimeName <- ordered(arrDep1$TimeName, times)
+    arrDep <- merge(arrDep, timesDf, by.x = 'CRSElapsedTimeGroup', by.y = 'TimeNumber')
+    arrDep$TimeName <- ordered(arrDep$TimeName, times)
   }
   if(pref == 'distance') {
-    arrDep1 <- merge(arrDep1, distanceGroupDf(), by.x = 'DistanceGroup', by.y = 'DistanceNumber')
-    arrDep1$DistanceName <- ordered(arrDep1$DistanceName, distanceGroups())
+    arrDep <- merge(arrDep, distanceGroupDf(), by.x = 'DistanceGroup', by.y = 'DistanceNumber')
+    arrDep$DistanceName <- ordered(arrDep$DistanceName, distanceGroups())
   }
-  arrDep1[is.na(arrDep1)] <- 0
+  arrDep[is.na(arrDep)] <- 0
   
   txt <- switch(pref,
-                "airline" = as.character(arrDep1$AirlineName),
-                "hour" = arrDep1$HourName,
-                "day" = arrDep1$DayName,
-                "time" = arrDep1$TimeName,
-                "distance" = arrDep1$DistanceName)
+                "airline" = as.character(arrDep$AirlineName),
+                "hour" = arrDep$HourName,
+                "day" = arrDep$DayName,
+                "time" = arrDep$TimeName,
+                "distance" = arrDep$DistanceName)
   
   return (plot_ly(
     x = switch(pref,
-               "airline" = as.character(arrDep1$AirlineCode),
-               "hour" = arrDep1$HourName,
-               "day" = arrDep1$DayName,
-               "time" = arrDep1$TimeName,
-               "distance" = arrDep1$DistanceName), 
-    y = arrDep1$Frequency.x, 
-    frame = arrDep1$MonthName,
-    text = paste(txt, '\nArrivals:', arrDep1$Frequency.x),
+               "airline" = as.character(arrDep$AirlineCode),
+               "hour" = arrDep$HourName,
+               "day" = arrDep$DayName,
+               "time" = arrDep$TimeName,
+               "distance" = arrDep$DistanceName), 
+    y = arrDep$Frequency.x, 
+    frame = arrDep$MonthName,
+    text = paste(txt, '\nArrivals:', arrDep$Frequency.x),
     hoverinfo = 'text',
     name = 'Arrivals',
     type = 'bar') %>%
-    add_trace(y = arrDep1$Frequency.y,
-              text = paste(txt, '\nDepartures:', arrDep1$Frequency.y),
-              hoverinfo = 'text',
-              name = 'Departures') %>%
-    layout(barmode = if(stacked) 'stack'))
+      add_trace(y = arrDep$Frequency.y,
+                text = paste(txt, '\nDepartures:', arrDep$Frequency.y),
+                hoverinfo = 'text',
+                name = 'Departures') %>%
+      layout(barmode = if(stacked) 'stack'))
+}
+
+flightDataNoOfDelays <- function(airport, stacked) {
+  groupBy <- c('Month', 'ArrHour')
+
+  delaysdata <- subset(flights, Dest == airport)
+  delays_TotalFlights <- count(delaysdata, groupBy)
+  colnames(delays_TotalFlights)<-c(groupBy, "Total")
+  
+  delays_NAS <- delaysdata[delaysdata$NASDelay!=0 & !is.na(delaysdata$NASDelay),]
+  delays_NAS <- count(delays_NAS, groupBy)
+  colnames(delays_NAS)<-c(groupBy, "NAS")
+  
+  delays_Security <- delaysdata[delaysdata$SecurityDelay!=0 & !is.na(delaysdata$SecurityDelay),]
+  delays_Security <- count(delays_Security, groupBy)
+  colnames(delays_Security)<-c(groupBy, "Security")
+  
+  delays_Weather <- delaysdata[delaysdata$WeatherDelay!=0 & !is.na(delaysdata$WeatherDelay),]
+  delays_Weather <- count(delays_Weather, groupBy)
+  colnames(delays_Weather)<-c(groupBy, "Weather")
+  
+  delays_Carrier <- delaysdata[delaysdata$CarrierDelay!=0 & !is.na(delaysdata$CarrierDelay),]
+  delays_Carrier <- count(delays_Carrier, groupBy)
+  colnames(delays_Carrier)<-c(groupBy, "Carrier")
+  
+  delays_LateAircraftDelay <- delaysdata[delaysdata$LateAircraftDelay!=0 & !is.na(delaysdata$LateAircraftDelay),]
+  delays_LateAircraftDelay <- count(delays_LateAircraftDelay, groupBy)
+  colnames(delays_LateAircraftDelay)<-c(groupBy, "LAD")
+  
+  delays_Combined <- delaysdata[
+    (delaysdata$NASDelay!=0 & !is.na(delaysdata$NASDelay))
+    |(delaysdata$SecurityDelay!=0 & !is.na(delaysdata$SecurityDelay))
+    |(delaysdata$WeatherDelay!=0 & !is.na(delaysdata$WeatherDelay))
+    |(delaysdata$CarrierDelay!=0 & !is.na(delaysdata$CarrierDelay))
+    |(delaysdata$LateAircraftDelay!=0 & !is.na(delaysdata$LateAircraftDelay)),]
+  delays_Combined <- count(delays_Combined, groupBy)
+  colnames(delays_Combined)<-c(groupBy, "Combined")
+  
+  delays <- Reduce(function(x, y) merge(x, y, all=TRUE, by=groupBy), 
+                   list(delays_Carrier, delays_LateAircraftDelay, delays_NAS, 
+                        delays_Security, delays_Weather, delays_TotalFlights, delays_Combined))
+  delays$Percent <- delays$Combined * 100.00 / delays$Total
+
+  delays <- merge(delays, monthsDf, by.x = "Month",  by.y = "MonthNumber")
+  delays$MonthName <- ordered(delays$MonthName, months)
+  
+  delays <- merge(delays, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')
+  delays$HourName <- ordered(delays$HourName, hours())
+
+  delays[is.na(delays)] <- 0
+
+  return(plot_ly(
+    x = delays$HourName, 
+    y = delays$NAS, 
+    name = 'National Airspace System',
+    frame = delays$MonthName, 
+    type = 'bar'  ) %>% 
+      add_trace(y = delays$Security,
+                name = 'Security' ) %>% 
+      add_trace(y = delays$Carrier,
+                name = 'Carrier' ) %>% 
+      add_trace(y = delays$LAD,
+                name = 'Late Aircraft' ) %>% 
+      add_trace(y = delays$Weather,
+                name = 'Weather' ) %>%
+      add_trace(
+          y = delays$Percent,
+          name = 'Percentage',
+          type = 'scatter',
+          mode = 'lines+markers',
+          line = list(color = 'black')
+          #yaxis = 'y2'
+          ) %>%
+      layout(
+        barmode = if(stacked) 'stack'
+        #yaxis2 = list(
+        #  range = c(0, 120),
+        #  overlaying = 'y',
+        #  side = 'right',
+        #  showline = FALSE,
+        #  zeroline = FALSE,
+        #  showgrid = FALSE,
+        #  showticklabels = FALSE
+        #)
+      ))
 }
 
 # server
-server <- function(input, output){
-  
+server <- function(input, output){  
   output$flightDataNumberOfFlights <- renderPlotly({
     subplot(
       flightDataNoOfFlights(input$noOfFlightsBy, input$flightDataAirport1, input$flightDataStacked),
       flightDataNoOfFlights(input$noOfFlightsBy, input$flightDataAirport2, input$flightDataStacked),
       shareY = input$flightDataCompare
     ) %>%
-    layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
+      layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
+  })
+
+  output$flightDataNumberOfDelays <- renderPlotly({
+    subplot(
+      flightDataNoOfDelays(input$flightDataAirport1, input$flightDataStacked),
+      flightDataNoOfDelays(input$flightDataAirport2, input$flightDataStacked),
+      shareY = input$flightDataCompare
+    ) %>%
+      layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
   })
 }
 
