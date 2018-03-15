@@ -158,27 +158,6 @@ ui <- dashboardPage(
               fluidRow(
                 box(width = 12)
               )
-              # fluidRow(
-              #   tabBox(width = 12,
-              #     tabPanel("Plots",
-              #           plotOutput("common_originPorts"),
-              #           plotOutput("common_destinationPorts")
-              #       ),
-              #     tabPanel("Table: Most Common 15 Origin Airports",
-              #              fluidRow(
-              #                column( dataTableOutput("table_commonOriginAPort1"),width = 6),
-              #                column( dataTableOutput("table_commonOriginAPort2"),width = 6)
-              #                )
-              #         ),
-              #     tabPanel("Table: Most Common 15 Destination Airports",
-              #              fluidRow(
-              #                column( dataTableOutput("table_commonDestinationAPort1"),width = 6),
-              #                column( dataTableOutput("table_commonDestinationAPort2"),width = 6)
-              #              )
-              #     )
-              #      )
-              #   )
-              
       ),#tabItem
       tabItem("singleAirport",
               fluidRow(column(width = 12, h2('Single Airports'))),
@@ -205,7 +184,6 @@ ui <- dashboardPage(
       )#tabItem 
 )))
 
-<<<<<<< HEAD
 flightDataNoOfFlights <- function(pref, airport, stacked) {
   byGroup <- c("Month", switch(pref,
                                "airline" = 'AirlineID',
@@ -222,18 +200,6 @@ flightDataNoOfFlights <- function(pref, airport, stacked) {
   arrDep1$MonthName <- ordered(arrDep1$MonthName, months)
   if(pref == 'airline') {
     arrDep1 <- merge(arrDep1, airlines, by = "AirlineID", all.x = TRUE)
-=======
-# server
-server <- function(input, output,session){
-  
-  #hide dropdowns on the basis of radio buttons selected
-
-  
-  getCounts <- function (data, groupBy) {
-    counts <- count(data, Month, groupBy)
-    colnames(counts) <- c(groupBy, "")
-    return(counts)
->>>>>>> Layout ui.r
   }
   if(pref == 'hour') {
     arrDep1 <- merge(arrDep1, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')
