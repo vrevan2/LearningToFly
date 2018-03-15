@@ -348,6 +348,27 @@ flightDataNoOfDelays <- function(airport, stacked) {
       ))
 }
 
+getMap <- function(mapData, useOriginState) {
+  return(ggplot()
+         + geom_map(data = us_map, map = us_map,
+                    aes(x = long, y = lat, map_id = id),
+                    color = "white", size = 0.5)
+         + geom_map(data = mapData, map = us_map,
+                    aes(fill = percent, map_id = if(useOriginState) OriginState else DestState))
+         + geom_map(data = mapData, map = us_map,
+                    aes(map_id = if(useOriginState) OriginState else DestState),
+                    fill = "#ffffff", alpha = 0, color = "white", show.legend = FALSE)
+         + geom_text(data = centers,
+                     aes(label = id, x = x, y = y),
+                     color = "white", size = 4)
+         + scale_fill_distiller(palette = "Blues", na.value = "#f7f7f7")
+         + coord_map()
+         + labs(x = NULL, y = NULL)
+         + theme_bw()
+         + theme(panel.border = element_blank(), panel.grid = element_blank(),
+                 axis.ticks = element_blank(), axis.text = element_blank()))
+}
+
 # server
 server <- function(input, output) {
   observe({
@@ -383,45 +404,8 @@ server <- function(input, output) {
       layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
   })
   
-  output$mapFlightsToIL <- renderPlot({
-    gg <- ggplot()
-    gg <- gg + geom_map(data=us_map, map=us_map,
-                        aes(x=long, y=lat, map_id=id),
-                        color="white", size=0.5)
-    gg <- gg + geom_map(data=flightsToIL, map=us_map,
-                        aes(fill=percent, map_id=OriginState))
-    gg <- gg + geom_map(data=flightsToIL, map=us_map,
-                        aes(map_id=OriginState),
-                        fill="#ffffff", alpha=0, color="white",
-                        show.legend =FALSE)
-    gg <- gg + geom_text(data=centers, aes(label=id, x=x, y=y), color="white", size=4)
-    gg <- gg + scale_fill_distiller(palette="Blues", na.value="#f7f7f7")
-    gg <- gg + coord_map()
-    gg <- gg + labs(x=NULL, y=NULL)
-    gg <- gg + theme_bw()
-    gg <- gg + theme(panel.border=element_blank(), panel.grid=element_blank(), axis.ticks=element_blank(), axis.text=element_blank())
-    gg
-  })
-  
-  output$mapFlightsFromIL <- renderPlot({
-    gg <- ggplot()
-    gg <- gg + geom_map(data=us_map, map=us_map,
-                        aes(x=long, y=lat, map_id=id),
-                        color="white", size=0.5)
-    gg <- gg + geom_map(data=flightsFromIL, map=us_map,
-                        aes(fill=percent, map_id=DestState))
-    gg <- gg + geom_map(data=flightsFromIL, map=us_map,
-                        aes(map_id=DestState),
-                        fill="#ffffff", alpha=0, color="white",
-                        show.legend =FALSE)
-    gg <- gg + geom_text(data=centers, aes(label=id, x=x, y=y), color="white", size=4)
-    gg <- gg + scale_fill_distiller(palette="Blues", na.value="#f7f7f7")
-    gg <- gg + coord_map()
-    gg <- gg + labs(x=NULL, y=NULL)
-    gg <- gg + theme_bw()
-    gg <- gg + theme(panel.border=element_blank(), panel.grid=element_blank(), axis.ticks=element_blank(), axis.text=element_blank())
-    gg
-  })
+  output$mapFlightsToIL <- renderPlot({getMap(flightsToIL, useOriginState = TRUE)})
+  output$mapFlightsFromIL <- renderPlot({getMap(flightsFromIL, useOriginState = FALSE)})
 }
 
 shinyApp(ui = ui, server = server)
