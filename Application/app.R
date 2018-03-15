@@ -140,35 +140,72 @@ ui <- dashboardPage(
           ),
           tabPanel(
             "Number of Delays",
+            selectInput("top15", "Type", 
+                        c("All Stacked", "All Combined", "Carrier Delay", "Weather Delay", "NAS Delay","Security Delay", "Late Aircraft Delay"),
+                        width = '50%', selected = 'All Stacked'),
             plotlyOutput("flightDataNumberOfDelays")
           )
         ))
       ),#tabItem
-      tabItem("topCharts",
+      tabItem("compareAirports",
+              fluidRow(column(width = 12, h2('Top 15'))),
               fluidRow(
-                tabBox(width = 12,
-                  tabPanel("Plots",
-                        plotOutput("common_originPorts"),
-                        plotOutput("common_destinationPorts")
-                    ),
-                  tabPanel("Table: Most Common 15 Origin Airports",
-                           fluidRow(
-                             column( dataTableOutput("table_commonOriginAPort1"),width = 6),
-                             column( dataTableOutput("table_commonOriginAPort2"),width = 6)
-                             )
-                      ),
-                  tabPanel("Table: Most Common 15 Destination Airports",
-                           fluidRow(
-                             column( dataTableOutput("table_commonDestinationAPort1"),width = 6),
-                             column( dataTableOutput("table_commonDestinationAPort2"),width = 6)
-                           )
-                  )
-                   )
-                )
+                column(width = 4, selectInput("flightDataAirport1", "Airport 1", airportList, width = '100%', selected = 'ORD')),
+                column(width = 4, selectInput("flightDataAirport2", "Airport 2", airportList, width = '100%', selected = 'MDW')),
+                column(width = 1, checkboxInput("compareFlightData", "Compare")),
+                column(width = 1, checkboxInput("stackedFlightData", "Stacked")),
+                column(width = 1, offset = 1, actionButton("arrivalDepartureData", "Show Data"))),
+              fluidRow(
+                box(width = 12)
+              )
+              # fluidRow(
+              #   tabBox(width = 12,
+              #     tabPanel("Plots",
+              #           plotOutput("common_originPorts"),
+              #           plotOutput("common_destinationPorts")
+              #       ),
+              #     tabPanel("Table: Most Common 15 Origin Airports",
+              #              fluidRow(
+              #                column( dataTableOutput("table_commonOriginAPort1"),width = 6),
+              #                column( dataTableOutput("table_commonOriginAPort2"),width = 6)
+              #                )
+              #         ),
+              #     tabPanel("Table: Most Common 15 Destination Airports",
+              #              fluidRow(
+              #                column( dataTableOutput("table_commonDestinationAPort1"),width = 6),
+              #                column( dataTableOutput("table_commonDestinationAPort2"),width = 6)
+              #              )
+              #     )
+              #      )
+              #   )
               
-      )#tabItem
+      ),#tabItem
+      tabItem("singleAirport",
+              fluidRow(column(width = 12, h2('Single Airports'))),
+              fluidRow(
+                column(width = 4, selectInput("flightDataAirport1", "Source Airport", airportList, width = '100%', selected = 'ORD')),
+                column(width = 4,  radioButtons("rb", "Select by", inline = TRUE, c("Top50","Airlines", "Date","Day")))
+              ),
+              fluidRow(
+                column(width = 3, selectInput("top50", "Top50", c(), width = '100%')),
+                column(width = 3, selectInput("airlinesBreakdown", "Airlines Breakdown", c(), width = '100%')),
+                column(width = 3, dateInput("dateBreakdown", "Date Breakdown",value = "2017-01-01", min = "2017-01-01", max = "2017-12-31", width = '100%')),
+                column(width = 3, selectInput("dayBreakdown", "Day Breakdown", 
+                                              c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"), 
+                                              width = '100%'))
+              ),
+              fluidRow(
+                box(width = 12)
+              )
+      ),#tabItem
+      tabItem("states",
+              fluidRow(
+                box(title = "Flights to and from different states within US", width = 12)
+              )
+      )#tabItem 
 )))
 
+<<<<<<< HEAD
 flightDataNoOfFlights <- function(pref, airport, stacked) {
   byGroup <- c("Month", switch(pref,
                                "airline" = 'AirlineID',
@@ -185,6 +222,18 @@ flightDataNoOfFlights <- function(pref, airport, stacked) {
   arrDep1$MonthName <- ordered(arrDep1$MonthName, months)
   if(pref == 'airline') {
     arrDep1 <- merge(arrDep1, airlines, by = "AirlineID", all.x = TRUE)
+=======
+# server
+server <- function(input, output,session){
+  
+  #hide dropdowns on the basis of radio buttons selected
+
+  
+  getCounts <- function (data, groupBy) {
+    counts <- count(data, Month, groupBy)
+    colnames(counts) <- c(groupBy, "")
+    return(counts)
+>>>>>>> Layout ui.r
   }
   if(pref == 'hour') {
     arrDep1 <- merge(arrDep1, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')

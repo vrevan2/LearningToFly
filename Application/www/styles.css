@@ -68,6 +68,19 @@
     font-size: 15px;
 }
 
+.skin-blue .checkbox{
+  padding-top: 25px;
+  margin-bottom: 20px;
+}
+
+.skin-blue .btn{
+  margin-top: 25px;
+}
+
+/*.skin-blue #dateBreakdown{
+  visibility: hidden;
+}*/
+
 
 
 
