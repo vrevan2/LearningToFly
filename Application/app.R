@@ -171,11 +171,12 @@ ui <- dashboardPage(
         fluidRow(column(width = 12, h2('Single Airports'))),
         fluidRow(
           column(width = 4, selectInput("flightDataAirport1", "Source Airport", airportList, width = '100%', selected = 'ORD')),
-          column(width = 4, radioButtons("rb", "Select by", inline = TRUE, c("Target Airport", "Airline", "Date", "Day of the Week"))),
-          column(width = 4, selectInput("airportBreakdown", "Target Airport", c(), width = '100%')),
-          column(width = 4, selectInput("airlineBreakdown", "Airline", c(), width = '100%')),
-          column(width = 4, dateInput("dateBreakdown", "Date", value = "2017-01-01", min = "2017-01-01", max = "2017-12-31", width = '100%')),
-          column(width = 4, selectInput("dayBreakdown", "Day of the Week", daysOfWeek, width = '100%'))),
+          column(width = 4, radioButtons("breakdownRadioButton", "Select by", inline = TRUE, c("Target Airport", "Airline", "Date", "Day of the Week"))),
+          column(width = 4, 
+                 selectInput("airportBreakdown", "Target Airport", c(), width = '100%'), 
+                 selectInput("airlineBreakdown", "Airline", c(), width = '100%'),
+                 dateInput("dateBreakdown", "Date", value = "2017-01-01", min = "2017-01-01", max = "2017-12-31", width = '100%'),
+                 selectInput("dayBreakdown", "Day of the Week", daysOfWeek, width = '100%'))),
         fluidRow(box(width = 12))
       ),
       tabItem(
@@ -355,13 +356,13 @@ server <- function(input, output) {
     hide("dateBreakdown")
     hide("dayBreakdown")
     
-    switch(
-      input$rb,
-      "Target Airport" = show("airportBreakdown"),
-      "Airline" = show("airlineBreakdown"),
-      "Date" = show("dateBreakdown"),
-      "Day of the Week" = show("dayBreakdown")
-    )
+    shinyjs::show(switch(
+      input$breakdownRadioButton,
+      "Target Airport" = "airportBreakdown",
+      "Airline" = "airlineBreakdown",
+      "Date" = "dateBreakdown",
+      "Day of the Week" = "dayBreakdown"
+    ))
   })
   
   output$flightDataNumberOfFlights <- renderPlotly({
