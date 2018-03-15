@@ -5,6 +5,11 @@ library(plyr)
 library(reshape2) ##??
 library(DT)
 library(shinyjs)
+library(rgdal)
+library(rgeos)
+library(ggplot2)
+library(maptools) #you might have to istall this package
+library(mapproj)  #you might have to istall this package
 
 #### Globals
 defaultTz <- "America/Chicago"
@@ -97,6 +102,16 @@ airportList <- as.character(read.csv("data/illinois_airports.csv")$IATA)
 airportList <- airportList[order(airportList)]
 names(airportList) <- sapply(airportList, function(x) paste(x, '-', airports[x == airports$IATA,]$AirportName))
 
+# flight By State
+flightsFromIL <- count(subset(flights, OriginState == 'IL'), vars = 'DestState')
+flightsToIL <- count(subset(flights, DestState == 'IL'), vars = 'OriginState')
+flightsFromIL <- flightsFromIL %>% mutate('percent' = freq * 100 / sum(flightsFromIL$freq))
+flightsToIL <- flightsToIL %>% mutate('percent' = freq * 100 / sum(flightsToIL$freq))
+#Load the map
+us <- readOGR(dsn = "data/us_states_hexgrid.geojson", layer = "us_states_hexgrid")
+centers <- cbind.data.frame(data.frame(gCentroid(us, byid=TRUE), id=us@data$iso3166_2))
+us_map <- fortify(us, region="iso3166_2")
+
 # Layout
 ui <- dashboardPage(
   dashboardHeader(title = 'R you Shiny'),
@@ -166,7 +181,10 @@ ui <- dashboardPage(
       tabItem(
         "states",
         fluidRow(
-          box(title = "Flights to and from different states within US", width = 12)))
+          box(title = "Flights from IL to different states within US", width = 12, plotOutput('mapFlightsFromIL')),
+          box(title = "Flights to IL from different states within US", width = 12, plotOutput('mapFlightsToIL'))
+        )
+      )
 )))
 
 flightDataNoOfFlights <- function(pref, airport, stacked) {
@@ -362,6 +380,46 @@ server <- function(input, output) {
       shareY = input$flightDataCompare
     ) %>%
       layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
+  })
+  
+  output$mapFlightsToIL <- renderPlot({
+    gg <- ggplot()
+    gg <- gg + geom_map(data=us_map, map=us_map,
+                        aes(x=long, y=lat, map_id=id),
+                        color="white", size=0.5)
+    gg <- gg + geom_map(data=flightsToIL, map=us_map,
+                        aes(fill=percent, map_id=OriginState))
+    gg <- gg + geom_map(data=flightsToIL, map=us_map,
+                        aes(map_id=OriginState),
+                        fill="#ffffff", alpha=0, color="white",
+                        show.legend =FALSE)
+    gg <- gg + geom_text(data=centers, aes(label=id, x=x, y=y), color="white", size=4)
+    gg <- gg + scale_fill_distiller(palette="Blues", na.value="#f7f7f7")
+    gg <- gg + coord_map()
+    gg <- gg + labs(x=NULL, y=NULL)
+    gg <- gg + theme_bw()
+    gg <- gg + theme(panel.border=element_blank(), panel.grid=element_blank(), axis.ticks=element_blank(), axis.text=element_blank())
+    gg
+  })
+  
+  output$mapFlightsFromIL <- renderPlot({
+    gg <- ggplot()
+    gg <- gg + geom_map(data=us_map, map=us_map,
+                        aes(x=long, y=lat, map_id=id),
+                        color="white", size=0.5)
+    gg <- gg + geom_map(data=flightsFromIL, map=us_map,
+                        aes(fill=percent, map_id=DestState))
+    gg <- gg + geom_map(data=flightsFromIL, map=us_map,
+                        aes(map_id=DestState),
+                        fill="#ffffff", alpha=0, color="white",
+                        show.legend =FALSE)
+    gg <- gg + geom_text(data=centers, aes(label=id, x=x, y=y), color="white", size=4)
+    gg <- gg + scale_fill_distiller(palette="Blues", na.value="#f7f7f7")
+    gg <- gg + coord_map()
+    gg <- gg + labs(x=NULL, y=NULL)
+    gg <- gg + theme_bw()
+    gg <- gg + theme(panel.border=element_blank(), panel.grid=element_blank(), axis.ticks=element_blank(), axis.text=element_blank())
+    gg
   })
 }
 
