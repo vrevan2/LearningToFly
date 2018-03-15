@@ -4,6 +4,7 @@ library(plotly)
 library(plyr)
 library(reshape2) ##??
 library(DT)
+library(shinyjs)
 
 #### Globals
 defaultTz <- "America/Chicago"
@@ -115,6 +116,7 @@ ui <- dashboardPage(
       menuItem('States', tabName = 'states')
     )),
   dashboardBody(
+    useShinyjs(),
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
     ),
@@ -136,7 +138,7 @@ ui <- dashboardPage(
             "Number of Flights",
             radioButtons("noOfFlightsBy", "Plot by", inline = TRUE, 
                          c("Airline" = "airline", "Hour" = "hour", "Day of the Week" = "day", "Flight Time" = "time", "Distance" = "distance")),
-            plotlyOutput("flightDataNumberOfFlights")
+            plotlyOutput("flightDataNumberOfFlights", height = "60vh")
           ),
           tabPanel(
             "Number of Delays",
@@ -160,7 +162,7 @@ ui <- dashboardPage(
               fluidRow(column(width = 12, h2('Single Airports'))),
               fluidRow(
                 column(width = 4, selectInput("flightDataAirport1", "Source Airport", airportList, width = '100%', selected = 'ORD')),
-                column(width = 4,  radioButtons("rb", "Select by", inline = TRUE, c("Top50","Airlines", "Date","Day")))
+                column(width = 4, radioButtons("rb", "Select by", inline = TRUE, c("Top50","Airlines", "Date","Day")))
               ),
               fluidRow(
                 column(width = 3, selectInput("top50", "Top50", c(), width = '100%')),
@@ -330,6 +332,34 @@ flightDataNoOfDelays <- function(airport, stacked) {
 
 # server
 server <- function(input, output){  
+
+    observe(
+    if(input$rb == "Top50"){
+      enable("top50")
+      disable("airlinesBreakdown")
+      disable("dateBreakdown")
+      disable("dayBreakdown")
+    }
+    else if(input$rb == "Airlines"){
+      enable("airlinesBreakdown")
+      disable("top50")
+      disable("dateBreakdown")
+      disable("dayBreakdown")
+    }
+    else if(input$rb == "Date"){
+      enable("dateBreakdown")
+      disable("top50")
+      disable("airlinesBreakdown")
+      disable("dayBreakdown")
+    }
+    else if(input$rb == "Day"){
+      enable("dayBreakdown")
+      disable("top50")
+      disable("airlinesBreakdown")
+      disable("dateBreakdown")
+    }
+  )
+
   output$flightDataNumberOfFlights <- renderPlotly({
     subplot(
       flightDataNoOfFlights(input$noOfFlightsBy, input$flightDataAirport1, input$flightDataStacked),
