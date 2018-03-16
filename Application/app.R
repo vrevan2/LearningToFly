@@ -106,10 +106,14 @@ names(airportList) <- sapply(airportList, function(x) paste(x, '-', airports[x =
 flightsFromIL <- count(subset(flights, OriginState == 'IL'), vars = 'DestState')
 flightsFromIL$Percent <- as.numeric(format(round(
   flightsFromIL$freq * 100 / sum(flightsFromIL$freq), 2), nsmall = 2))
+colnames(flightsFromIL) <- c('State', 'Flights', 'Percent')
+flightsFromIL$Flights <- format(flightsFromIL$Flights, big.mark=",", scientific=FALSE)
 
 flightsToIL <- count(subset(flights, DestState == 'IL'), vars = 'OriginState')
 flightsToIL$Percent <- as.numeric(format(round(
   flightsToIL$freq * 100 / sum(flightsToIL$freq), 2), nsmall = 2))
+colnames(flightsFromIL) <- c('State', 'Flights', 'Percent')
+flightsToIL$Flights <- format(flightsToIL$Flights, big.mark=",", scientific=FALSE)
 
 #Load the map
 us <- readOGR(dsn = "data/us_states_hexgrid.geojson", layer = "us_states_hexgrid")
@@ -122,9 +126,8 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem('Home', tabName = 'home'),
-      menuItem('Flight Data', tabName = 'flightData'),
-      menuItem('Compare Airports', tabName = 'compareAirports'),
-      menuItem('Single Airports', tabName = 'singleAirport'),
+      menuItem('Compare 2 Airports', tabName = 'flightData'),
+      menuItem('Deep Dive', tabName = 'deepDive'),
       menuItem('States', tabName = 'states')
     )
   ),
@@ -137,13 +140,13 @@ ui <- dashboardPage(
       tabItem("home", includeHTML("home.html")),
       tabItem(
         "flightData", 
-        fluidRow(column(width = 12, h2('Number of Arrivals, Departures and Delays'))),
+        fluidRow(column(width = 12, h2('Number of Flights, Delays and Top 15 Destinations'))),
         fluidRow(
           column(width = 4, selectInput("flightDataAirport1", "Airport 1", airportList, width = '100%', selected = 'ORD')),
           column(width = 4, selectInput("flightDataAirport2", "Airport 2", airportList, width = '100%', selected = 'MDW')),
           column(width = 1, checkboxInput("flightDataCompare", "Compare")),
           column(width = 1, checkboxInput("flightDataStacked", "Stacked_Bars")),
-          column(width = 1, offset = 1, actionButton("arrivalDepartureData", "Show Data"))
+          column(width = 1, actionButton("flightDataTable", "Show Data"))
         ),
         fluidRow(tabBox(
           id = "flightDataTabs",
@@ -151,28 +154,18 @@ ui <- dashboardPage(
           tabPanel(
             "Number of Flights",
             radioButtons("noOfFlightsBy", "Plot by", inline = TRUE, c("Airline" = "airline", "Hour" = "hour", "Day of the Week" = "day", "Flight Time" = "time", "Distance" = "distance")),
-            plotlyOutput("flightDataNumberOfFlights", height = "60vh")
-          ),
+            plotlyOutput("flightDataNumberOfFlights", height = "60vh")),
           tabPanel(
             "Number of Delays",
-            plotlyOutput("flightDataNumberOfDelays"))
+            plotlyOutput("flightDataNumberOfDelays", height = "60vh")),
+          tabPanel(
+            "Top 15 Destinations",
+            plotlyOutput("flightDataTop15Destinations", height = "60vh"))
         ))
       ),
       tabItem(
-        "compareAirports",
-        fluidRow(column(width = 12, h2('Top 15'))),
-        fluidRow(
-          column(width = 4, selectInput("flightDataAirport1", "Airport 1", airportList, width = '100%', selected = 'ORD')),
-          column(width = 4, selectInput("flightDataAirport2", "Airport 2", airportList, width = '100%', selected = 'MDW')),
-          column(width = 1, checkboxInput("compareFlightData", "Compare")),
-          column(width = 1, checkboxInput("stackedFlightData", "Stacked")),
-          column(width = 1, offset = 1, actionButton("arrivalDepartureData", "Show Data"))
-        ),
-        fluidRow(box(width = 12))
-      ),
-      tabItem(
-        "singleAirport",
-        fluidRow(column(width = 12, h2('Single Airports'))),
+        "deepDive",
+        fluidRow(column(width = 12, h2('Deep Dive for an Airport'))),
         fluidRow(
           column(width = 4, selectInput("flightDataAirport1", "Source Airport", airportList, width = '100%', selected = 'ORD')),
           column(width = 4, radioButtons("breakdownRadioButton", "Select by", inline = TRUE, c("Target Airport", "Airline", "Date", "Day of the Week"))),
@@ -322,17 +315,17 @@ flightDataNoOfDelays <- function(airport, stacked) {
     plot_ly(
       x = delays$HourName,
       y = delays$NAS,
-      name = 'National Airspace System',
+      name = paste(airport, 'National Airspace System'),
       frame = delays$MonthName,
       type = 'bar'
     ) %>%
-      add_trace(y = delays$Security, name = 'Security') %>%
-      add_trace(y = delays$Carrier, name = 'Carrier') %>%
-      add_trace(y = delays$LAD, name = 'Late Aircraft') %>%
-      add_trace(y = delays$Weather, name = 'Weather') %>%
+      add_trace(y = delays$Security, name = paste(airport, 'Security')) %>%
+      add_trace(y = delays$Carrier, name = paste(airport, 'Carrier')) %>%
+      add_trace(y = delays$LAD, name = paste(airport, 'Late Aircraft')) %>%
+      add_trace(y = delays$Weather, name = paste(airport, 'Weather')) %>%
       add_trace(
         y = delays$Percent,
-        name = 'Percentage',
+        name = paste(airport, 'Percentage'),
         type = 'scatter',
         mode = 'lines+markers',
         line = list(color = 'black')
@@ -352,19 +345,52 @@ flightDataNoOfDelays <- function(airport, stacked) {
       ))
 }
 
+top15Airports <- function(airport, stacked) {
+  airportData <- flights[flights$Origin == airport | flights$Dest == airport, ]
+  airportData$DestinationAirport[airportData$Origin == airport] <- as.character(airportData$Dest[airportData$Origin == airport])
+  airportData$DestinationAirport[airportData$Dest == airport] <- as.character(airportData$Origin[airportData$Dest == airport])
+  top15Airports <- count(airportData, 'DestinationAirport') %>% arrange(desc(freq)) %>% head(15)
+  top15AirportData <- subset(airportData, DestinationAirport %in% top15Airports$DestinationAirport)
+  
+  groupBy <- c('Month', 'DestinationAirport')
+  counts <- count(top15AirportData, groupBy) # Total Flights
+  counts <- merge(counts, count(top15AirportData[airportData$Dest == airport, ], groupBy), by = groupBy, all = TRUE) # Arrivals
+  counts <- merge(counts, count(top15AirportData[airportData$Origin == airport, ], groupBy), by = groupBy, all = TRUE) # Departures
+  colnames(counts) <- c(groupBy, 'Total_Flights', 'Arrivals', 'Departures')
+  counts <- merge(counts, airports, by.x = 'DestinationAirport', by.y = 'IATA')
+  counts <- merge(counts, monthsDf, by.x = "Month",  by.y = "MonthNumber")
+  counts$MonthName <- ordered(counts$MonthName, months)
+  
+  return(plot_ly(
+    x = counts$DestinationAirport,
+    y = counts$Arrivals,
+    frame = counts$MonthName,
+    text = paste(counts$AirportName, '\nArrivals:', counts$Arrivals),
+    hoverinfo = 'text',
+    name = paste('Arrivals to', airport),
+    type = 'bar'
+  ) %>%
+    add_trace(
+      y = counts$Departures,
+      text = paste(counts$AirportName, '\nDepartures:', counts$Departures),
+      hoverinfo = 'text',
+      name = paste('Departures from', airport)
+    ) %>%
+    layout(
+      barmode = if (stacked) 'stack',
+      hovermode = 'compare'))
+}
+
 getMap <- function(mapData, useOriginState) {
-  State <- if(useOriginState) mapData$OriginState else mapData$DestState
   return(ggplot()
-         + geom_map(data = us_map, map = us_map,
-                    aes(x = long, y = lat, map_id = id),
-                    color = "gray", size = 0.5)
          + geom_text(data = centers,
                      aes(label = id, x = x, y = y),
                      color = "black", size = 4)
          + geom_map(data = mapData, map = us_map, alpha = 0.5,
-                    aes(fill = Percent, map_id = State))
+                    aes(map_id = State, fill = Percent, data = Flights))
          + scale_fill_distiller(palette = "Spectral", na.value = "red")
          + coord_map()
+         + coord_fixed(ratio = 10)
          + labs(x = NULL, y = NULL)
          + theme_bw()
          + theme(panel.border = element_blank(), panel.grid = element_blank(),
@@ -416,8 +442,17 @@ server <- function(input, output) {
       layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
   })
   
-  output$mapFlightsFromIL <- renderPlotly({ getMap(flightsFromIL, useOriginState = FALSE) })
-  output$mapFlightsToIL <- renderPlotly({ getMap(flightsToIL, useOriginState = TRUE) })
+  output$flightDataTop15Destinations <- renderPlotly({
+    subplot(
+      top15Airports(input$flightDataAirport1, input$flightDataStacked),
+      top15Airports(input$flightDataAirport2, input$flightDataStacked),
+      shareY = input$flightDataCompare
+    ) %>%
+      layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
+  })
+  
+  output$mapFlightsFromIL <- renderPlotly({ getMap(flightsFromIL) })
+  output$mapFlightsToIL <- renderPlotly({ getMap(flightsToIL) })
 }
 
 shinyApp(ui = ui, server = server)
