@@ -371,6 +371,16 @@ getMap <- function(mapData, useOriginState) {
                  axis.ticks = element_blank(), axis.text = element_blank()))
 }
 
+getTop50Airports <- function(srcAirport) {
+  return(merge(flights[flights$Origin == srcAirport,] %>% count(c('Dest')), 
+               flights[flights$Dest == srcAirport,] %>% count(c('Origin')), 
+               by.x = 'Dest', by.y = 'Origin', all = TRUE) %>% 
+           mutate(total = freq.x + freq.y) %>% 
+           arrange(desc(total)) %>% 
+           head(50) %>% 
+           'colnames<-'(c("Airport", "Dep", "Arr", "total")))
+}
+
 # server
 server <- function(input, output) {
   observe({
