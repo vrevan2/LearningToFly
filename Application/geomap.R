@@ -3,12 +3,6 @@ library(shinydashboard)
 
 library(plotly)
 library(tidyr)
-library(leaflet)
-library(jpeg)
-library(grid)
-
-library(lubridate)
-library(reshape2)
 library(DT)
 
 
