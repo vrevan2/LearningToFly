@@ -166,7 +166,8 @@ ui <- function() {
       menuItem('Home', tabName = 'home'), 
       menuItem('Compare Airports', tabName = 'flightData'), 
       menuItem('Deep Dive', tabName = 'deepDive'), 
-      menuItem('States', tabName = 'states')
+      menuItem('States', tabName = 'states'),
+      menuItem('About | Preferences', tabName = 'preferences')
     )
   ), 
   dashboardBody(
@@ -176,6 +177,10 @@ ui <- function() {
     ), 
     tabItems(
       tabItem('home', includeHTML('home.html')), 
+      tabItem(
+        'preferences',
+        fluidRow(column(width = 12, h2('Preferences')))
+      ),
       tabItem(
         'flightData', 
         fluidRow(column(width = 12, h2('Number of Flights, Delays and Top 15 Destinations'))), 
@@ -228,41 +233,62 @@ flightDataNoOfFlightsPlot <- function(pref, airport, stacked) {
   byGroup <- c('Month', switch(
     pref, 
     'airline' = 'AirlineID', 
-    'hour' = 'ArrHour', 
+    'hour' = 'Hour', # Use ArrHour or DepHour appropriately
     'day' = 'DayOfWeek', 
     'time' = 'CRSElapsedTimeGroup', 
     'distance' = 'DistanceGroup'
   ))
   
-  arrival <- count(subset(flights, Dest == airport), byGroup)
+  arrival <- count(subset(flights, Dest == airport), if(pref == 'hour') c('Month', 'ArrHour') else byGroup)
   colnames(arrival) <- c(byGroup, 'Frequency')
-  departure <- count(subset(flights, Origin == airport), byGroup)
+
+  departure <- count(subset(flights, Origin == airport), if(pref == 'hour') c('Month', 'DepHour') else byGroup)
   colnames(departure) <- c(byGroup, 'Frequency')
 
-  arrDep <- merge(arrival, departure, by = byGroup, all.x = TRUE, all.y = TRUE)
-  arrDep <- merge(arrDep, monthsDf, by.x = 'Month', by.y = 'MonthNumber')
-  arrDep$MonthName <- ordered(arrDep$MonthName, months)
+  arrDep <- merge(arrival, departure, by = byGroup, all = TRUE)
 
   if (pref == 'airline') {
+    uniques <- expand.grid(unique(arrDep$AirlineID), c(1:12))
+    cols <- c('AirlineID', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
     arrDep <- merge(arrDep, airlines, by = 'AirlineID', all.x = TRUE)
   } else
   if (pref == 'hour') {
-    arrDep <- merge(arrDep, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')
+    uniques <- expand.grid(c(0:23), c(1:12))
+    cols <- c('Hour', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <- merge(arrDep, hoursDf(), by.x = 'Hour', by.y = 'HourNumber', all = TRUE)
     arrDep$HourName <- ordered(arrDep$HourName, hours())
   } else
   if (pref == 'day') {
-    arrDep <- merge(arrDep, daysOfWeekDf, by.x = 'DayOfWeek', by.y = 'DayNumber')
+    uniques <- expand.grid(c(1:7), c(1:12))
+    cols <- c('DayOfWeek', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <- merge(arrDep, daysOfWeekDf, by.x = 'DayOfWeek', by.y = 'DayNumber', all = TRUE)
     arrDep$DayName <- ordered(arrDep$DayName, daysOfWeek)
   } else
   if (pref == 'time') {
-    arrDep <- merge(arrDep, timesDf, by.x = 'CRSElapsedTimeGroup', by.y = 'TimeNumber')
+    uniques <- expand.grid(c(0:5), c(1:12))
+    cols <- c('CRSElapsedTimeGroup', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <- merge(arrDep, timesDf, by.x = 'CRSElapsedTimeGroup', by.y = 'TimeNumber', all = TRUE)
     arrDep$TimeName <- ordered(arrDep$TimeName, times)
   } else
   if (pref == 'distance') {
-    arrDep <- merge(arrDep, distanceGroupDf(), by.x = 'DistanceGroup', by.y = 'DistanceNumber')
+    uniques <- expand.grid(c(0:8), c(1:12))
+    cols <- c('DistanceGroup', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <- merge(arrDep, distanceGroupDf(), by.x = 'DistanceGroup', by.y = 'DistanceNumber', all = TRUE)
     arrDep$DistanceName <- ordered(arrDep$DistanceName, distanceGroups())
   }
   arrDep[is.na(arrDep)] <- 0
+  arrDep <- merge(arrDep, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
+  arrDep$MonthName <- ordered(arrDep$MonthName, months)
   
   xCol <- switch(
     pref, 
@@ -298,7 +324,8 @@ flightDataNoOfFlightsPlot <- function(pref, airport, stacked) {
         hoverinfo = 'text', 
         name = paste(airport, 'Departures')
       ) %>%
-      layout(barmode = if (stacked) 'stack', hovermode = 'compare')
+      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', 
+             yaxis = list(range = c(0, max(max(arrDep$Frequency.x), max(arrDep$Frequency.y)))))
   )
 }
 
@@ -337,15 +364,20 @@ flightDataNoOfDelaysPlot <- function(airport, stacked) {
   delays_Combined <- count(delays_Combined, groupBy)
   colnames(delays_Combined) <- c(groupBy, 'Combined')
   
-  delays <- Reduce( function(x, y) merge(x, y, all = TRUE, by = groupBy), 
+  delays <- Reduce( function(x, y) merge(x, y, by = groupBy, all = TRUE), 
       list(delays_Carrier, delays_LateAircraftDelay, delays_NAS, delays_Security, 
         delays_Weather, delays_TotalFlights, delays_Combined))
   delays$Percent <- delays$Combined * 100.00 / delays$Total
   
-  delays <- merge(delays, monthsDf, by.x = 'Month', by.y = 'MonthNumber')
+  uniques <- expand.grid(c(0:23), c(1:12))
+  cols <- c('ArrHour', 'Month')
+  colnames(uniques) <- cols
+  delays <- merge(delays, uniques, by = cols, all = TRUE)
+  
+  delays <- merge(delays, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
   delays$MonthName <- ordered(delays$MonthName, months)
   
-  delays <- merge(delays, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')
+  delays <- merge(delays, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber', all = TRUE)
   delays$HourName <- ordered(delays$HourName, hours())
   
   delays[is.na(delays)] <- 0
@@ -388,12 +420,20 @@ top15AirportsPlot <- function(airport, stacked) {
   top15AirportData <- getTopDestinations(airport, 15, getFlightData = TRUE)
   groupBy <- c('Month', 'DestinationAirport')
   counts <- count(top15AirportData, groupBy) # Total Flights
-  counts <- merge(counts, count(top15AirportData[airportData$Dest == airport, ], groupBy), by = groupBy, all = TRUE) # Arrivals
-  counts <- merge(counts, count(top15AirportData[airportData$Origin == airport, ], groupBy), by = groupBy, all = TRUE) # Departures
+  
+  uniques <- expand.grid(unique(top15AirportData$DestinationAirport), c(1:12))
+  cols <- c('DestinationAirport', 'Month')
+  colnames(uniques) <- cols
+  counts <- merge(counts, uniques, by = cols, all = TRUE)
+  
+  counts <- merge(counts, count(top15AirportData[top15AirportData$Dest == airport, ], groupBy), by = groupBy, all = TRUE) # Arrivals
+  counts <- merge(counts, count(top15AirportData[top15AirportData$Origin == airport, ], groupBy), by = groupBy, all = TRUE) # Departures
   colnames(counts) <- c(groupBy, 'Total_Flights', 'Arrivals', 'Departures')
-  counts <- merge(counts, airports, by.x = 'DestinationAirport', by.y = 'IATA')
-  counts <- merge(counts, monthsDf, by.x = 'Month', by.y = 'MonthNumber')
+  counts <- merge(counts, airports, by.x = 'DestinationAirport', by.y = 'IATA', all.x = TRUE)
+  counts <- merge(counts, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
   counts$MonthName <- ordered(counts$MonthName, months)
+  
+  counts[is.na(counts)] <- 0
   
   return(plot_ly(
     x = counts$DestinationAirport, 
@@ -422,7 +462,7 @@ deepDivePlot <- function(airport, choice, filterValue) {
     deepDiveData <- deepDiveData[deepDiveData$Origin == filterValue | deepDiveData$Dest == filterValue, ]
   } else
   if(choice == 'Airline') {
-    deepDiveData <- merge(deepDiveData, airlines, by = 'AirlineID')
+    deepDiveData <- merge(deepDiveData, airlines, by = 'AirlineID', all = TRUE)
     deepDiveData <- deepDiveData[deepDiveData$AirlineCode == filterValue, ]
   } else
   if(choice == 'Date') {
@@ -434,11 +474,14 @@ deepDivePlot <- function(airport, choice, filterValue) {
     deepDiveData <- deepDiveData[deepDiveData$DayOfWeek == filterValue, ]
   }
 
-  groupBy <- c('Month', 'ArrHour')
-  counts <- merge(
-    count(deepDiveData[deepDiveData$Origin == airport, ], groupBy), # Departures
-    count(deepDiveData[deepDiveData$Dest == airport, ], groupBy), # Arrivals
-    by = groupBy, all = TRUE)
+  groupBy <- c('Month', 'Hour')
+
+  deepDiveDepartures <- deepDiveData[deepDiveData$Origin == airport, ]
+  deepDiveDepartures$Hour <- deepDiveDepartures$DepHour
+  deepDiveArrivals <- deepDiveData[deepDiveData$Dest == airport, ]
+  deepDiveArrivals$Hour <- deepDiveArrivals$ArrHour
+  
+  counts <- merge(count(deepDiveDepartures, groupBy), count(deepDiveArrivals, groupBy), by = groupBy, all = TRUE)
   colnames(counts) <- c(groupBy, 'Departures', 'Arrivals')
   
   if(choice == 'Date') {
@@ -447,23 +490,33 @@ deepDivePlot <- function(airport, choice, filterValue) {
                                    | (deepDiveData$WeatherDelay != 0 & !is.na(deepDiveData$WeatherDelay))
                                    | (deepDiveData$CarrierDelay != 0 & !is.na(deepDiveData$CarrierDelay))
                                    | (deepDiveData$LateAircraftDelay != 0 & !is.na(deepDiveData$LateAircraftDelay)), ]
+    deepDiveDelays$Hour <- deepDiveDelays$ArrHour
+    
     deepDiveCancellations <- cancellations[cancellations$Origin == airport 
                                            & cancellations$Month == as.numeric(format(filterValue, "%m")) 
                                            & cancellations$DayofMonth == as.numeric(format(filterValue, "%d")), ]
-    
+    deepDiveCancellations$Hour <- deepDiveCancellations$CRSDepHour # Plot by scheduled departure hour for cancellations
+
     counts <- merge(counts, count(deepDiveDelays, groupBy), by = groupBy, all = TRUE)
     counts <- merge(counts, count(deepDiveCancellations, groupBy), by = groupBy, all = TRUE)
     colnames(counts) <- c(groupBy, 'Departures', 'Arrivals', 'Delays', 'Cancellations')
   } else {
-    counts <- merge(counts, monthsDf, by.x = 'Month', by.y = 'MonthNumber')
+    uniques <- expand.grid(c(0:23), c(1:12))
+    cols <- c('Hour', 'Month')
+    colnames(uniques) <- cols
+    counts <- merge(counts, uniques, by = cols, all = TRUE)
+    
+    counts <- merge(counts, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
     counts$MonthName <- ordered(counts$MonthName, months)
   }
-  counts <- merge(counts, hoursDf(), by.x = 'ArrHour', by.y = 'HourNumber')
+  counts <- merge(counts, hoursDf(), by.x = 'Hour', by.y = 'HourNumber', all = TRUE)
   counts$HourName <- ordered(counts$HourName, hours())
+  
+  counts[is.na(counts)] <- 0
   
   p <- plot_ly(
       x = counts$HourName, 
-      y = counts$Departures, 
+      y = counts$Departures,  
       frame = if(choice != 'Date') counts$MonthName, 
       text = paste(counts$Departures, 'Departures from', airport, ifelse(choice == 'Target Airport', paste('to', filterValue), '')), 
       hoverinfo = 'text', 
@@ -476,8 +529,8 @@ deepDivePlot <- function(airport, choice, filterValue) {
         hoverinfo = 'text', 
         name = paste('Arrivals to', airport, ifelse(choice == 'Target Airport', paste('from', filterValue), ''))
       ) %>%
-      layout(hovermode = 'compare')
-  
+      layout(hovermode = 'compare', title = paste(airport, '-', filterValue))
+
   if(choice == 'Date') {
     p <- p %>%
       add_trace(
