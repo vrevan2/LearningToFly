@@ -50,47 +50,38 @@ origins <- unique(weather_sub[,c('Olat' , 'Olong' , "OPRCP" ,"OSNOW", "OSNWD","O
 dests <- unique(weather_sub[,c('Dlat' , 'Dlong' , "DPRCP" ,"DSNOW", "DSNWD","DTMAX","DTMIN","DTAVG","Dest"  )])
 
 
-all_states <- map_data("state")
-#plot all states with ggplot
-p <- ggplot() + 
-      geom_polygon( data=all_states, aes(x=long, y=lat, group = group),colour="white", fill="grey80" )+ 
 
-             
-       geom_segment(aes(x = weather_sub$Olong, y = weather_sub$Olat, xend = weather_sub$Dlong,
-         yend = weather_sub$Dlat  ) , colour = "rgba(255,0,0,0.2)", data = weather_sub)+ 
-      
-        geom_point( data=origins, aes(x=Olong, y=Olat, size = 0.00001 ) , colour = "rgba(0,0,255,0.2)")+  
+x<- leaflet() %>%  addTiles() 
 
-        geom_point( data=dests, aes(x=Dlong, y=Dlat, size = 0.00001 ) , colour = "rgba(0,255,0,0.2)")+  
-        
-      
-          scale_fill_distiller(palette = "Spectral", na.value = "red")+ 
-         coord_map()+ 
-         labs(x = NULL, y = NULL)+ 
-         theme_bw()+ 
-         theme(panel.border = element_blank(), panel.grid = element_blank(),
-                 axis.ticks = element_blank(), axis.text = element_blank())
-
-p <- ggplotly(p)
-
-p$x$data[[2]]$text<- paste("Flights :" , weather_sub$Freq )
-p$x$data[[1]]$hoverinfo<-"none"
-p$x$data[[3]]$text<- paste0("IATA : " , origins$Origin,
-                      "<br>" , "PRCP : " , origins$OPRCP,
-                      "<br>" ,"SNOW : " , origins$OSNOW,
-                      "<br>" ,"SNWD : " , origins$OSNWD,
-                      "<br>" ,"TMAX : " , origins$OTMAX,
-                      "<br>" ,"TMIN : " , origins$OTMIN,
-                      "<br>" ,"TAVG : " , origins$OTAVG
-                       )
-p$x$data[[4]]$text<- paste0("IATA : " , dests$Dest,
-                      "<br>" , "PRCP : " , dests$DPRCP,
-                      "<br>" ,"SNOW : " , dests$DSNOW,
-                      "<br>" ,"SNWD : " , dests$DSNWD,
-                      "<br>" ,"TMAX : " , dests$DTMAX,
-                      "<br>" ,"TMIN : " , dests$DTMIN,
-                      "<br>" ,"TAVG : " , dests$DTAVG
-                       )
-
-p
+for(i in 1:nrow(weather_sub)){
+    x <- addPolylines(x, lat = as.numeric(weather_sub[i, c('Olat','Dlat' )]), 
+                               lng = as.numeric(weather_sub[i, c('Olong', 'Dlong')]) , label = paste(as.character(weather_sub[i,c('Freq')]) ," : " ,weather_sub[i,c('Origin')]) ,weight = 0.7 )
+}
+x<-addCircles(x,lng =origins$Olong,
+             lat =origins$Olat,
+             radius = 1, 
+             color = "red", 
+             fillColor = "red",
+             popup = paste0("<b>IATA : " , origins$Origin,
+                      "</b><br/>" , "<b>PRCP</b> : " , origins$OPRCP,
+                      "<br/>" ,"<b>SNOW </b>: " , origins$OSNOW,
+                      "<br/>" ,"<b>SNWD </b>: " , origins$OSNWD,
+                      "<br/>" ,"<b>TMAX </b>: " , origins$OTMAX,
+                      "<br/>" ,"<b>TMIN </b>: " , origins$OTMIN,
+                      "<br/>" ,"<b>TAVG </b>: " , origins$OTAVG
+                       ))
+x<-addCircles(x,lng =dests$Dlong,
+             lat =dests$Dlat,
+             radius = 1, 
+             color = "red", 
+             fillColor = "red",
+             popup = paste0("<b>IATA : " , dests$Dest,
+                      "</b><br/>" , "<b>PRCP :</b> " , dests$DPRCP,
+                      "<br/>" ,"<b>SNOW :</b> " , dests$DSNOW,
+                      "<br/>" ,"<b>SNWD : </b>" , dests$DSNWD,
+                      "<br/>" ,"<b>TMAX : </b>" , dests$DTMAX,
+                      "<br/>" ,"<b>TMIN : </b>" , dests$DTMIN,
+                      "<br/>" ,"<b>TAVG : </b>" , dests$DTAVG
+                       ))
+x
 
