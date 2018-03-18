@@ -403,7 +403,6 @@ flightDataNoOfDelaysPlot <- function(airport, stacked) {
   delays$HourName <- ordered(delays$HourName, hours())
   
   delays[is.na(delays)] <- 0
-  
   return(
     plot_ly(
       x = delays$HourName, 
