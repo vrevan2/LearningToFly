@@ -89,14 +89,14 @@
     }
   
    .skin-blue .main-sidebar {
-        width: 300px;
+        width: 400px;
         padding-top: 100px;
         position: fixed;
         font-size: 25px;
     }
     
     .skin-blue .content-wrapper{
-        margin-left: 300px;
+        margin-left: 400px;
     }
 
     .skin-blue .main-header{
@@ -199,6 +199,18 @@
     
     .skin-blue .hovertext text{
       font-size: 25px !important;
+    }
+    
+    .skin-blue p{
+      font-size: 25px;
+    }
+    
+    .skin-blue a{
+      font-size: 25px;
+    }
+    
+    .skin-blue div.box-header{
+      padding-bottom: 30px;
     }
     
 }

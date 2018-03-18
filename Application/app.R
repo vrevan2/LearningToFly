@@ -12,7 +12,9 @@ library(leaflet)
 # Colors
 arrivalColor <- '#6a819d'
 departureColor <- '#e76e48'
+
 plotLabelSize <- 12
+plotMarginTop <- 40
 
 daysOfWeek <- c('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 daysOfWeekDropDown <- c(1:7)
@@ -219,10 +221,10 @@ ui <- function() {
             plotlyOutput('flightDataNumberOfFlights', height = '60vh')),
           tabPanel(
             'Number of Delays',
-            plotlyOutput('flightDataNumberOfDelays', height = '60vh')),
+            plotlyOutput('flightDataNumberOfDelays', height = '70vh')),
           tabPanel(
             'Top 15 Destinations',
-            plotlyOutput('flightDataTop15Destinations', height = '60vh'))
+            plotlyOutput('flightDataTop15Destinations', height = '70vh'))
         ))
       ),
       tabItem(
@@ -237,13 +239,15 @@ ui <- function() {
             selectInput('airlineBreakdown', 'Airline', c(), width = '100%'),
             dateInput('dateBreakdown', 'Date', value = as.Date(format(Sys.Date(), '2017-%m-%d')), min = '2017-01-01', max = '2017-12-31', width = '100%'),
             selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%'))),
+
         fluidRow(id = 'deepDiveGraph', box(title = 'Deep Dive', width = 12, plotlyOutput('deepDivePlots', height = '60vh'))),
         fluidRow(id = 'deepDiveMap', box(title = 'Deep Dive', width = 12, leafletOutput('deepDiveLeaflet', height = '70vh')))
+
       ),
       tabItem(
         'states',
         fluidRow(
-          box(title = 'Flights betwen IL and different states within US', leafletOutput('mapFlightsToFromIL'), width = 12)
+          box(title = 'Flights between IL and different states within US', leafletOutput('mapFlightsToFromIL'), width = 12)
         )
       )
 )))
@@ -347,7 +351,7 @@ flightDataNoOfFlightsPlot <- function(pref, airport, stacked, is24Hour, isMetric
         marker = list(color = departureColor)
       ) %>%
 
-      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize),
+      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize), margin = list(t = plotMarginTop),
              yaxis = list(range = c(0, max(max(arrDep$Frequency.x), max(arrDep$Frequency.y)))))
   )
 }
@@ -413,9 +417,9 @@ flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
       type = 'bar',
       marker = list(color = '#4B7C8C')
     ) %>%
-      add_trace(y = delays$Security, name = paste(airport, 'Security'), marker = list(color = '#E47F7B')) %>%
+      add_trace(y = delays$Security, name = paste(airport, 'Security'), marker = list(color = '#002d58')) %>%
       add_trace(y = delays$Carrier, name = paste(airport, 'Carrier'), marker = list(color = '#EAC949')) %>%
-      add_trace(y = delays$LAD, name = paste(airport, 'Late Aircraft'), marker = list(color = '#7F949E')) %>%
+      add_trace(y = delays$LAD, name = paste(airport, 'Late Aircraft'), marker = list(color = '#E47F7B')) %>%
       add_trace(y = delays$Weather, name = paste(airport, 'Weather'), marker = list(color = '#84BCBE')) %>%
       add_trace(
         y = delays$Percent, 
@@ -426,7 +430,7 @@ flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
         marker = list(color = 'black')
         #yaxis = 'y2'
       ) %>%
-      layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize)
+      layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize),margin = list(t = plotMarginTop)
         #yaxis2 = list(
         #  range = c(0, 120),
         #  overlaying = 'y',
@@ -436,7 +440,8 @@ flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
         #  showgrid = FALSE,
         #  showticklabels = FALSE
         #)))))
-      )
+      ) %>%
+      animation_opts(4000, transition = 3000, easing = "elastic")
     )
 }
 
@@ -476,7 +481,7 @@ top15AirportsPlot <- function(airport, stacked) {
       name = paste('Departures from', airport),
       marker = list(color = departureColor)
     ) %>%
-    layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize))
+    layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize), margin = list(t = plotMarginTop))
   )
 }
 
@@ -607,7 +612,7 @@ deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
         name = paste('Arrivals to', airport, ifelse(isAirportChoice, paste('from', filterValue), '')),
         marker = list(color = arrivalColor)
       ) %>%
-      layout(hovermode = 'compare', title = plotTitle, font = list(size = plotLabelSize))
+      layout(hovermode = 'compare', title = plotTitle, font = list(size = plotLabelSize), margin = list(t = plotMarginTop), legend = list(x = 0.1, y = 0.9))
 
   if(isDateChoice) {
     p <- p %>%
@@ -623,7 +628,7 @@ deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
         text = paste(counts$Cancellations, 'Cancellations'),
         hoverinfo = 'text',
         name = 'Cancellations',
-        marker = list(color = '#3f2a14')
+        marker = list(color = '#795126')
       )
   }
 
@@ -632,7 +637,9 @@ deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
 
 getMap <- function() {
   # Load the map
+
   us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'OGRGeoJSON')
+
   centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
   us@data <- join(us@data, flightsIL, by = 'iso3166_2', type = 'left')
   us@data[is.na(us@data)]<- 0
@@ -662,9 +669,11 @@ server <- function(input, output, session) {
   observeEvent(input$dimension, {
     if(input$dimension[1] >= 2000){
       plotLabelSize <<- 25
+      plotMarginTop <<- 100
     }
     else{
       plotLabelSize <<- 12
+      plotMarginTop <<- 40
     }
   })
 

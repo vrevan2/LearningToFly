@@ -1,0 +1,13 @@
+name: Application
+title: Application
+username:
+account: jsohal2
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 301771
+bundleId: 1275113
+url: https://jsohal2.shinyapps.io/Application/
+when: 1521403298.66342
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app - old.R|geomap.R|plot_sai.R|plots_B.R
