@@ -17,6 +17,12 @@ defaultTz <- 'America/Chicago'
 is24Hour <- FALSE
 isMetric <- FALSE
 
+plotLabelSize <- 12
+
+#colors
+arrivalColor <- '#6a819d'
+departureColor <- '#e76e48'
+
 daysOfWeek <- c('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 daysOfWeekDropDown <- c(1:7)
 names(daysOfWeekDropDown) <- daysOfWeek
@@ -153,9 +159,9 @@ colnames(flightsToIL) <- c('State', 'Flights', 'Percent')
 flightsToIL$Flights <- format(flightsToIL$Flights, big.mark = ', ', scientific = FALSE)
 
 # Load the map
-us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
-centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
-us_map <- fortify(us, region = 'iso3166_2')
+# us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
+# centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
+# us_map <- fortify(us, region = 'iso3166_2')
 
 # Layout
 ui <- function() {
@@ -173,7 +179,20 @@ ui <- function() {
   dashboardBody(
     useShinyjs(), 
     tags$head(
-      tags$link(rel = 'stylesheet', type = 'text/css', href = 'styles.css')
+      tags$link(rel = 'stylesheet', type = 'text/css', href = 'styles.css'),
+      tags$script('
+                  var dimension = [0, 0];
+                  $(document).on("shiny:connected", function(e) {
+                  dimension[0] = window.innerWidth;
+                  dimension[1] = window.innerHeight;
+                  Shiny.onInputChange("dimension", dimension);
+                  });
+                  $(window).resize(function(e) {
+                  dimension[0] = window.innerWidth;
+                  dimension[1] = window.innerHeight;
+                  Shiny.onInputChange("dimension", dimension);
+                  });
+                  ')
     ), 
     tabItems(
       tabItem('home', includeHTML('home.html')), 
@@ -217,7 +236,7 @@ ui <- function() {
                  selectInput('airlineBreakdown', 'Airline', c(), width = '100%'), 
                  dateInput('dateBreakdown', 'Date', value = as.Date(format(Sys.Date(), '2017-%m-%d')), min = '2017-01-01', max = '2017-12-31', width = '100%'), 
                  selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%'))), 
-        fluidRow(box(title = 'Deep Dive', width = 12, plotlyOutput('deepDivePlots')))
+        fluidRow(box(title = 'Deep Dive', width = 12, plotlyOutput('deepDivePlots', height = '60vh')))
       ), 
       tabItem(
         'states', 
@@ -316,15 +335,18 @@ flightDataNoOfFlightsPlot <- function(pref, airport, stacked) {
       text = paste(txt, '\nArrivals:', arrDep$Frequency.x), 
       hoverinfo = 'text', 
       name = paste(airport, 'Arrivals'), 
-      type = 'bar'
+      type = 'bar',
+      marker = list(color = arrivalColor)
     ) %>%
       add_trace(
         y = arrDep$Frequency.y, 
         text = paste(txt, '\nDepartures:', arrDep$Frequency.y), 
         hoverinfo = 'text', 
-        name = paste(airport, 'Departures')
+        name = paste(airport, 'Departures'), 
+        marker = list(color = departureColor)
       ) %>%
-      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', 
+
+      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize),
              yaxis = list(range = c(0, max(max(arrDep$Frequency.x), max(arrDep$Frequency.y)))))
   )
 }
@@ -402,7 +424,7 @@ flightDataNoOfDelaysPlot <- function(airport, stacked) {
         line = list(color = 'black')
         #yaxis = 'y2'
       ) %>%
-      layout(barmode = if (stacked) 'stack', hovermode = 'compare'
+      layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize)
         #yaxis2 = list(
         #  range = c(0, 120), 
         #  overlaying = 'y', 
@@ -450,7 +472,7 @@ top15AirportsPlot <- function(airport, stacked) {
       hoverinfo = 'text', 
       name = paste('Departures from', airport)
     ) %>%
-    layout(barmode = if (stacked) 'stack', hovermode = 'compare')
+    layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize))
   )
 }
 
@@ -521,15 +543,18 @@ deepDivePlot <- function(airport, choice, filterValue) {
       text = paste(counts$Departures, 'Departures from', airport, ifelse(choice == 'Target Airport', paste('to', filterValue), '')), 
       hoverinfo = 'text', 
       name = paste('Departures from', airport, ifelse(choice == 'Target Airport', paste('to', filterValue), '')), 
-      type = 'bar'
+      type = 'bar',
+      marker = list(color = departureColor)
     ) %>%
       add_trace(
         y = counts$Arrivals, 
         text = paste(counts$Arrivals, 'Arrivals to', airport, ifelse(choice == 'Target Airport', paste('from', filterValue), '')),
         hoverinfo = 'text', 
-        name = paste('Arrivals to', airport, ifelse(choice == 'Target Airport', paste('from', filterValue), ''))
+        name = paste('Arrivals to', airport, ifelse(choice == 'Target Airport', paste('from', filterValue), '')),
+        marker = list(color = arrivalColor)
       ) %>%
-      layout(hovermode = 'compare', title = paste(airport, '-', filterValue))
+
+      layout(hovermode = 'compare', title = paste(airport, '-', filterValue), font = list(size = plotLabelSize))
 
   if(choice == 'Date') {
     p <- p %>%
@@ -537,13 +562,15 @@ deepDivePlot <- function(airport, choice, filterValue) {
         y = counts$Delays, 
         text = paste(counts$Delays, 'Delays'),
         hoverinfo = 'text', 
-        name = 'Delays'
+        name = 'Delays',
+        marker = list(color = '#D7AF70')
       ) %>%
       add_trace(
         y = counts$Cancellations, 
         text = paste(counts$Cancellations, 'Cancellations'),
         hoverinfo = 'text', 
-        name = 'Cancellations'
+        name = 'Cancellations',
+        marker = list(color = '#8B635C')
       )
   }
   
@@ -568,6 +595,16 @@ getMap <- function(mapData, useOriginState) {
 
 # server
 server <- function(input, output, session) {
+  
+  observeEvent(input$dimension, {
+    if(input$dimension[1] >= 2000){
+      plotLabelSize <<- 25
+    }
+    else{
+      plotLabelSize <<- 12
+    }
+  })
+  
   observe({
     hide('airportBreakdown')
     hide('airlineBreakdown')

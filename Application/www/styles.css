@@ -65,7 +65,7 @@
 
 .skin-blue .content-wrapper{
 	background-color: #fafcfd;
-    font-size: 15px;
+  font-size: 15px;
 }
 
 .skin-blue .checkbox{
@@ -79,11 +79,15 @@
 
 
 @media (min-width: 2000px){
+    body * {
+      /*font-size: 25px !important;*/
+    }
+  
    .skin-blue .main-sidebar {
         width: 300px;
-        font-size: 25px;
         padding-top: 100px;
         position: fixed;
+        font-size: 25px;
     }
     
     .skin-blue .content-wrapper{
@@ -99,22 +103,93 @@
     }
 
     .skin-blue .main-header .logo{
-        font-size: 50px;
+        font-size: 50px !important;
         padding-top: 20px;
         padding-left: 10px;
         height: 100px;
         width: 400px;
     }
     
-      .skin-blue .navbar .sidebar-toggle{
+    .skin-blue .navbar .sidebar-toggle{
         padding-top: 30px;
-        font-size: 30px;
         display: none;
     }
     
     .skin-blue .main-header .navbar{
       margin-left: 400px;
     }
+    
+    /* dropdown height and font size */
+    .skin-blue .selectize-control .selectize-input{
+      height: 50px;
+      font-size: 25px;
+    }
+    
+    .skin-blue .selectize-control .selectize-dropdown{
+      line-height: 30px;
+      font-size: 25px;
+    }
+    
+    /* heading */
+    .skin-blue h2{
+      font-size: 30px !important;
+    }
+    
+    /* checkbox styles */
+    .skin-blue input[type='checkbox']{
+      width: 30px;
+      height: 30px;
+    }
+    
+    .skin-blue .checkbox{
+      padding-top: 35px;
+    }
+    
+    .skin-blue label > span {
+      margin-left: 20px;
+      font-size: 25px;
+    }
+    
+    /* button styles */
+    .skin-blue button{
+      width: 4vw;
+      height: 2.5vh;
+      font-size: 25px;
+    }
+    
+    .skin-blue .btn{
+      margin-top: 30px;
+    }
+    
+    /* radiobuttons styles */
+    .skin-blue input[type = 'radio']{
+      transform: scale(2);
+      margin-top: 11px;
+      margin-left: -5px;
+    }
+    
+    .skin-blue .radio-inline{
+      margin-right: 20px;
+    }
+  
+    /* dataInput styles */
+    .skin-blue input[type = text]{
+      height: 50px;
+    }
+    
+    .skin-blue table{
+      width: 500px;
+      height: 500px;
+    }
+    
+    .skin-blue .nav-tabs{
+      font-size: 25px;
+    }
+    
+    .skin-blue label{
+      font-size: 25px;
+    }
+    
 }
 
 
