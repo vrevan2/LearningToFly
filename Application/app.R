@@ -2,15 +2,12 @@ library(shiny)
 library(shinydashboard)
 library(plotly)
 library(plyr)
-library(reshape2) ##??
+library(reshape2)
 library(DT)
 library(shinyjs)
 library(rgdal)
 library(rgeos)
 library(leaflet)
-library(maptools)
-library(maps)
-library(mapproj)
 
 # Colors
 arrivalColor <- '#6a819d'
@@ -55,8 +52,8 @@ distanceGroupDf <- function(isMetric) {
   return(dgdf)
 }
 
-temperature <- function(x) {
-  return (if (temperatureFormat == 'F') x / 100.0 else ((x / 100.0) - 32) * (5 / 9))
+temperature <- function(x, inMetric) {
+  return (if (inMetric) x / 10.0 else ((x / 10.0) * 9 / 5) + 32)
 }
 
 tableHeaderArrDep <- function(airport1, airport2, tableName) {
@@ -143,7 +140,7 @@ cancellations <- flights[flights$CancellationCode != '', ]
 flights <- flights[flights$CancellationCode == '', ]
 
 # Weather Data
-weather <- read.csv("data/mapweather.csv")
+weather <- read.csv("data/mapweatherfull.csv")
 originState = "IL"
 
 # Flights By State
@@ -240,7 +237,8 @@ ui <- function() {
             selectInput('airlineBreakdown', 'Airline', c(), width = '100%'),
             dateInput('dateBreakdown', 'Date', value = as.Date(format(Sys.Date(), '2017-%m-%d')), min = '2017-01-01', max = '2017-12-31', width = '100%'),
             selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%'))),
-        fluidRow(box(title = 'Deep Dive', width = 12, plotlyOutput('deepDivePlots', height = '60vh')))
+        fluidRow(id = 'deepDiveGraph', box(title = 'Deep Dive', width = 12, plotlyOutput('deepDivePlots', height = '60vh'))),
+        fluidRow(id = 'deepDiveMap', box(title = 'Deep Dive', width = 12, leafletOutput('deepDiveLeaflet', height = '70vh')))
       ),
       tabItem(
         'states',
@@ -482,13 +480,50 @@ top15AirportsPlot <- function(airport, stacked) {
   )
 }
 
-deepDiveMap <- function(dateValue){
-  weather_sub <- subset(weather, Month == as.numeric(format(dateValue, "%m")) & DayofMonth == as.numeric(format(filterValue, "%d")) & OriginState == originState)
-  weatherFields = c("OPRCP", "OSNOW", "OSNWD", "OTMAX", "OTMIN", "OTAVG")
-  origins <- unique(weather_sub[,c('Olat', 'Olong', weatherFields, "Origin" )])
-  dests <- unique(weather_sub[,c('Dlat', 'Dlong', weatherFields, "Dest"  )])
+deepDiveMap <- function(dateValue, showDepartures, inMetric){
+  print(paste(dateValue, showDepartures, inMetric))
+  
+  weatherData <- subset(weather, Month == as.numeric(format(dateValue, "%m")) & DayofMonth == as.numeric(format(dateValue, "%d")))
+  if(showDepartures)
+    weatherData <- weatherData[weatherData$OriginState == originState, ]
+  else
+    weatherData <- weatherData[weatherData$DestState == originState, ]
 
-  x <- leaflet() %>% addTiles()  
+  origins <- unique(weatherData[,c('Olat', 'Olong', "OPRCP", "OSNOW", "OSNWD", "OTMAX", "OTMIN", "OTAVG", "Origin" )])
+  dests <- unique(weatherData[,c('Dlat', 'Dlong', "DPRCP", "DSNOW", "DSNWD", "DTMAX", "DTMIN", "DTAVG", "Dest"  )])
+  
+  x <- leaflet() %>% addTiles()
+  
+  for(i in 1:nrow(weatherData)){
+    lbl <- paste(
+      weatherData[i,c('Origin')], '>', weatherData[i,c('Dest')], '<br/># Flights:', as.character(weatherData[i,c('NoOfFlights')]),
+      '<br/># Cancellations:', as.character(weatherData[i,c('NoOfCancellations')])) %>% lapply(htmltools::HTML)
+    
+    x <- addPolylines(x, 
+      lat = as.numeric(weatherData[i, c('Olat','Dlat' )]), lng = as.numeric(weatherData[i, c('Olong', 'Dlong')]), 
+      label = lbl, weight = weatherData[i,c('NoOfFlights')]/15, color = 'green' )
+  }
+  x<-addCircles(x,
+    lng = origins$Olong, lat = origins$Olat, radius = 1, color = "red", fillColor = "red",
+    popup = paste0("<b>IATA : ",  origins$Origin,
+                   "</b><br/>",  "<b>PRCP</b> : ",origins$OPRCP,
+                   "<br/>", "<b>SNOW </b>: ", origins$OSNOW,
+                   "<br/>", "<b>SNWD </b>: ", origins$OSNWD,
+                   "<br/>", "<b>TMAX </b>: ", sapply(origins$OTMIN, temperature, inMetric = inMetric),
+                   "<br/>", "<b>TMIN </b>: ", sapply(origins$OTMAX, temperature, inMetric = inMetric),
+                   "<br/>", "<b>TAVG </b>: ", sapply(origins$OTAVG, temperature, inMetric = inMetric)
+  ))
+  x<-addCircles(x,
+    lng = dests$Dlong, lat = dests$Dlat, radius = 1, color = "red", fillColor = "red",
+    popup = paste0("<b>IATA : ",  dests$Dest,
+                   "</b><br/>",  "<b>PRCP :</b> ", dests$DPRCP,
+                   "<br/>", "<b>SNOW :</b> ", dests$DSNOW,
+                   "<br/>", "<b>SNWD : </b>", dests$DSNWD,
+                   "<br/>", "<b>TMAX : </b>", sapply(dests$DTMIN, temperature, inMetric = inMetric),
+                   "<br/>", "<b>TMIN : </b>", sapply(dests$DTMAX, temperature, inMetric = inMetric),
+                   "<br/>", "<b>TAVG : </b>", sapply(dests$DTAVG, temperature, inMetric = inMetric)
+  ))
+  return(x)
 }
 
 deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
@@ -638,6 +673,8 @@ server <- function(input, output, session) {
     hide('airlineBreakdown')
     hide('dateBreakdown')
     hide('dayBreakdown')
+    hide('deepDiveGraph')
+    hide('deepDiveMap')
 
     shinyjs::show(switch(
       input$breakdownRadioButton,
@@ -647,6 +684,8 @@ server <- function(input, output, session) {
       'airline' = 'airlineBreakdown',
       'day' = 'dayBreakdown'
     ))
+    
+    shinyjs::show(if(input$breakdownRadioButton == 'map') 'deepDiveMap' else 'deepDiveGraph')
   })
 
   observe({
@@ -697,6 +736,8 @@ server <- function(input, output, session) {
     )
     deepDivePlot(input$breakdownSourceAirport, input$breakdownRadioButton, filterValue, input$timeFormat == '24 hr')
   })
+  
+  output$deepDiveLeaflet <- renderLeaflet({ deepDiveMap(input$dateBreakdown, showDepartures = TRUE, inMetric = input$measurements == 'Metric') })
   
   output$mapFlightsToFromIL <- renderLeaflet({ getMap() })
 }

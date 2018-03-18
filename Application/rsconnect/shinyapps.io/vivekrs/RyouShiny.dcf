@@ -1,0 +1,13 @@
+name: RyouShiny
+title: RyouShiny
+username:
+account: vivekrs
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 301776
+bundleId: 1275183
+url: https://vivekrs.shinyapps.io/RyouShiny/
+when: 1521406184.21929
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app - old.R|geomap.R|plot_sai.R|plots_B.R
