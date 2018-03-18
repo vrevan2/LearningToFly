@@ -7,7 +7,7 @@ library(DT)
 library(shinyjs)
 library(rgdal)
 library(rgeos)
-library(ggplot2)
+library(leaflet)
 library(maptools)
 library(maps)
 library(mapproj)
@@ -144,21 +144,23 @@ flights <- flights[flights$CancellationCode == '', ]
 
 # Flights By State
 flightsFromIL <- count(subset(flights, OriginState == 'IL'), vars = 'DestState')
-flightsFromIL$Percent <- as.numeric(format(round(
-  flightsFromIL$freq * 100 / sum(flightsFromIL$freq), 2), nsmall = 2))
-colnames(flightsFromIL) <- c('State', 'Flights', 'Percent')
-flightsFromIL$Flights <- format(flightsFromIL$Flights, big.mark = ', ', scientific = FALSE)
-
+colnames(flightsFromIL) <- c('iso3166_2', 'Departures')
 flightsToIL <- count(subset(flights, DestState == 'IL'), vars = 'OriginState')
-flightsToIL$Percent <- as.numeric(format(round(
-  flightsToIL$freq * 100 / sum(flightsToIL$freq), 2), nsmall = 2))
-colnames(flightsToIL) <- c('State', 'Flights', 'Percent')
-flightsToIL$Flights <- format(flightsToIL$Flights, big.mark = ', ', scientific = FALSE)
+colnames(flightsToIL) <- c('iso3166_2', 'Arrivals')
+flightsIL <- merge(flightsToIL, flightsFromIL, by = 'iso3166_2', all = T)
+flightsIL <- flightsIL %>% mutate('percentArr' = Arrivals * 100 / sum(flightsIL$Arrivals), percentDep = Departures * 100 / sum(flightsIL$Departures), total = Arrivals+Departures)
+flightsIL$Arrivals <- format(flightsIL$Arrivals, big.mark = ',', scientific = FALSE)
+flightsIL$Departures <- format(flightsIL$Departures, big.mark = ',', scientific = FALSE)
 
 # Load the map
-# us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
-# centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
-# us_map <- fortify(us, region = 'iso3166_2')
+us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
+centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
+us@data <- join(us@data, flightsIL, by = 'iso3166_2', type = 'left')
+us@data[is.na(us@data)]<- 0
+us@data$labels <- sprintf(
+  "Arrivals: %s flights, %.2f%%<br/>Departures:%s flights, %.2f%%<br/>State: %s<br/>",
+  us@data$Arrivals, us@data$percentArr, us@data$Departures, us@data$percentDep, us@data$iso3166_2
+) %>% lapply(htmltools::HTML)
 
 # Layout
 ui <- function() {
@@ -251,8 +253,7 @@ ui <- function() {
       tabItem(
         'states',
         fluidRow(
-          box(title = 'Flights from IL to different states within US', width = 12, plotlyOutput('mapFlightsFromIL')),
-          box(title = 'Flights to IL from different states within US', width = 12, plotlyOutput('mapFlightsToIL'))
+          box(title = 'Flights from IL to different states within US', width = 12, leafletOutput('mapFlightsToFromIL'))
         )
       )
 )))
@@ -589,20 +590,24 @@ deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
   return(p)
 }
 
-getMap <- function(mapData, useOriginState) {
-  return(ggplot()
-         + geom_text(data = centers,
-                     aes(label = id, x = x, y = y),
-                     color = 'black', size = 4)
-         + geom_map(data = mapData, map = us_map, alpha = 0.5,
-                    aes(map_id = State, fill = Percent, data = Flights))
-         + scale_fill_distiller(palette = 'Spectral', na.value = 'red')
-         + coord_map()
-         + coord_fixed(ratio = 10)
-         + labs(x = NULL, y = NULL)
-         + theme_bw()
-         + theme(panel.border = element_blank(), panel.grid = element_blank(),
-                 axis.ticks = element_blank(), axis.text = element_blank()))
+getMap <- function() {
+  pal <- colorNumeric(
+    palette = "Blues",
+    domain = us@data$total)
+  return(leaflet(us) %>% 
+           addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+                       opacity = 1.0, fillOpacity = 0.5,
+                       fillColor = ~pal(us@data$total),
+                       highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                           bringToFront = TRUE),
+                       label = us@data$labels,
+                       labelOptions = labelOptions(
+                         style = list("font-weight" = "normal", padding = "3px 8px"),
+                         textsize = "15px",
+                         direction = "auto")
+           ) %>%
+           addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0)))
+         )
 }
 
 # server
@@ -680,9 +685,8 @@ server <- function(input, output, session) {
     )
     deepDivePlot(input$breakdownSourceAirport, input$breakdownRadioButton, filterValue, input$timeFormat == '24 hr')
   })
-
-  output$mapFlightsFromIL <- renderPlotly({ getMap(flightsFromIL) })
-  output$mapFlightsToIL <- renderPlotly({ getMap(flightsToIL) })
+  
+  output$mapFlightsToFromIL <- renderLeaflet({ getMap() })
 }
 
 shinyApp(ui = ui, server = server)
