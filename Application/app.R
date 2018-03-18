@@ -152,16 +152,6 @@ flightsIL <- flightsIL %>% mutate('percentArr' = Arrivals * 100 / sum(flightsIL$
 flightsIL$Arrivals <- format(flightsIL$Arrivals, big.mark = ',', scientific = FALSE)
 flightsIL$Departures <- format(flightsIL$Departures, big.mark = ',', scientific = FALSE)
 
-# Load the map
-us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
-centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
-us@data <- join(us@data, flightsIL, by = 'iso3166_2', type = 'left')
-us@data[is.na(us@data)]<- 0
-us@data$labels <- sprintf(
-  "Arrivals: %s flights, %.2f%%<br/>Departures:%s flights, %.2f%%<br/>State: %s<br/>",
-  us@data$Arrivals, us@data$percentArr, us@data$Departures, us@data$percentDep, us@data$iso3166_2
-) %>% lapply(htmltools::HTML)
-
 # Layout
 ui <- function() {
   dashboardPage(
@@ -591,9 +581,20 @@ deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
 }
 
 getMap <- function() {
+  # Load the map
+  us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
+  centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
+  us@data <- join(us@data, flightsIL, by = 'iso3166_2', type = 'left')
+  us@data[is.na(us@data)]<- 0
+  us@data$labels <- sprintf(
+    "Arrivals: %s flights, %.2f%%<br/>Departures:%s flights, %.2f%%<br/>State: %s<br/>",
+    us@data$Arrivals, us@data$percentArr, us@data$Departures, us@data$percentDep, us@data$iso3166_2
+  ) %>% lapply(htmltools::HTML)
+  
   pal <- colorNumeric(
     palette = "Blues",
     domain = us@data$total)
+  
   return(leaflet(us) %>% 
            addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
                        opacity = 1.0, fillOpacity = 0.5,
