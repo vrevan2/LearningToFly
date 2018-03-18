@@ -240,12 +240,12 @@ ui <- function() {
             selectInput('airlineBreakdown', 'Airline', c(), width = '100%'),
             dateInput('dateBreakdown', 'Date', value = as.Date(format(Sys.Date(), '2017-%m-%d')), min = '2017-01-01', max = '2017-12-31', width = '100%'),
             selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%'))),
-        fluidRow(box(title = 'Deep Dive', width = 12, plotlyOutput('deepDivePlots', height = '60vh')))
+        fluidRow(box(title = 'Deep Dive', plotlyOutput('deepDivePlots', width = 12, height = '60vh')))
       ),
       tabItem(
         'states',
         fluidRow(
-          box(title = 'Flights from IL to different states within US', width = 12, leafletOutput('mapFlightsToFromIL'))
+          box(title = 'Flights betwen IL and different states within US', leafletOutput('mapFlightsToFromIL'), width = 12)
         )
       )
 )))
@@ -597,28 +597,24 @@ getMap <- function() {
   centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
   us@data <- join(us@data, flightsIL, by = 'iso3166_2', type = 'left')
   us@data[is.na(us@data)]<- 0
+  
   us@data$labels <- sprintf(
-    "Arrivals: %s flights, %.2f%%<br/>Departures:%s flights, %.2f%%<br/>State: %s<br/>",
-    us@data$Arrivals, us@data$percentArr, us@data$Departures, us@data$percentDep, us@data$iso3166_2
+    'State: %s<br/>Flights from IL: %s, %.2f%%<br/>Flights to IL: %s, %.2f%%<br/>',
+    us@data$google_name, us@data$Arrivals, us@data$percentArr, us@data$Departures, us@data$percentDep
   ) %>% lapply(htmltools::HTML)
   
-  pal <- colorNumeric(
-    palette = "Blues",
-    domain = us@data$total)
+  pal <- colorNumeric(palette = 'Blues', domain = us@data$total)
   
   return(leaflet(us) %>% 
-           addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+           addPolygons(color = 'gray', weight = 1, smoothFactor = 0.5,
                        opacity = 1.0, fillOpacity = 0.5,
                        fillColor = ~pal(us@data$total),
-                       highlightOptions = highlightOptions(color = "white", weight = 2,
-                                                           bringToFront = TRUE),
+                       highlightOptions = highlightOptions(color = 'black', weight = 2, bringToFront = TRUE),
                        label = us@data$labels,
-                       labelOptions = labelOptions(
-                         style = list("font-weight" = "normal", padding = "3px 8px"),
-                         textsize = "15px",
-                         direction = "auto")
+                       labelOptions = labelOptions( style = list("font-weight" = "normal", padding = "3px 8px"), textsize = "15px", direction = "auto")
            ) %>%
-           addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0)))
+           addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0))) %>%
+           addLegend(pal = pal, values = ~total, title = '# Flights')
          )
 }
 
