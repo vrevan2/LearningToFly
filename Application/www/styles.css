@@ -175,11 +175,13 @@
     /* dataInput styles */
     .skin-blue input[type = text]{
       height: 50px;
+      font-size: 25px;
     }
     
     .skin-blue table{
       width: 500px;
       height: 500px;
+      font-size: 25px;
     }
     
     .skin-blue .nav-tabs{
@@ -188,6 +190,10 @@
     
     .skin-blue label{
       font-size: 25px;
+    }
+    
+    .skin-blue .hovertext text{
+      font-size: 25px !important;
     }
     
 }

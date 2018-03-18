@@ -408,22 +408,24 @@ flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
   delays[is.na(delays)] <- 0
   return(
     plot_ly(
-      x = delays$HourName,
-      y = delays$NAS,
-      name = paste(airport, 'National Airspace System'),
-      frame = delays$MonthName,
-      type = 'bar'
+      x = delays$HourName, 
+      y = delays$NAS, 
+      name = paste(airport, 'National Airspace System'), 
+      frame = delays$MonthName, 
+      type = 'bar',
+      marker = list(color = '#4B7C8C')
     ) %>%
-      add_trace(y = delays$Security, name = paste(airport, 'Security')) %>%
-      add_trace(y = delays$Carrier, name = paste(airport, 'Carrier')) %>%
-      add_trace(y = delays$LAD, name = paste(airport, 'Late Aircraft')) %>%
-      add_trace(y = delays$Weather, name = paste(airport, 'Weather')) %>%
+      add_trace(y = delays$Security, name = paste(airport, 'Security'), marker = list(color = '#E47F7B')) %>%
+      add_trace(y = delays$Carrier, name = paste(airport, 'Carrier'), marker = list(color = '#EAC949')) %>%
+      add_trace(y = delays$LAD, name = paste(airport, 'Late Aircraft'), marker = list(color = '#7F949E')) %>%
+      add_trace(y = delays$Weather, name = paste(airport, 'Weather'), marker = list(color = '#84BCBE')) %>%
       add_trace(
-        y = delays$Percent,
-        name = paste(airport, 'Percentage'),
-        type = 'scatter',
-        mode = 'lines+markers',
-        line = list(color = 'black')
+        y = delays$Percent, 
+        name = paste(airport, 'Percentage'), 
+        type = 'scatter', 
+        mode = 'lines+markers', 
+        line = list(color = 'black'),
+        marker = list(color = 'black')
         #yaxis = 'y2'
       ) %>%
       layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize)
@@ -460,19 +462,21 @@ top15AirportsPlot <- function(airport, stacked) {
   counts[is.na(counts)] <- 0
 
   return(plot_ly(
-    x = counts$DestinationAirport,
-    y = counts$Arrivals,
-    frame = counts$MonthName,
-    text = paste(counts$AirportName, '\nArrivals:', counts$Arrivals),
-    hoverinfo = 'text',
-    name = paste('Arrivals to', airport),
-    type = 'bar'
+    x = counts$DestinationAirport, 
+    y = counts$Arrivals, 
+    frame = counts$MonthName, 
+    text = paste(counts$AirportName, '\nArrivals:', counts$Arrivals), 
+    hoverinfo = 'text', 
+    name = paste('Arrivals to', airport), 
+    type = 'bar',
+    marker = list(color = arrivalColor)
   ) %>%
     add_trace(
-      y = counts$Departures,
-      text = paste(counts$AirportName, '\nDepartures:', counts$Departures),
-      hoverinfo = 'text',
-      name = paste('Departures from', airport)
+      y = counts$Departures, 
+      text = paste(counts$AirportName, '\nDepartures:', counts$Departures), 
+      hoverinfo = 'text', 
+      name = paste('Departures from', airport),
+      marker = list(color = departureColor)
     ) %>%
     layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize))
   )
@@ -577,14 +581,14 @@ deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
         text = paste(counts$Delays, 'Delays'),
         hoverinfo = 'text',
         name = 'Delays',
-        marker = list(color = '#D7AF70')
+        marker = list(color = '#e7be48')
       ) %>%
       add_trace(
         y = counts$Cancellations,
         text = paste(counts$Cancellations, 'Cancellations'),
         hoverinfo = 'text',
         name = 'Cancellations',
-        marker = list(color = '#8B635C')
+        marker = list(color = '#3f2a14')
       )
   }
 
