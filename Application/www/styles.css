@@ -1,5 +1,10 @@
-*{
+* {
     box-sizing: border-box;
+}
+
+.leaflet-container {
+  background-color: white;
+  height: 85vh!important;
 }
 
 .skin-blue .main-header .logo {

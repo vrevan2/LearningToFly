@@ -240,7 +240,7 @@ ui <- function() {
             selectInput('airlineBreakdown', 'Airline', c(), width = '100%'),
             dateInput('dateBreakdown', 'Date', value = as.Date(format(Sys.Date(), '2017-%m-%d')), min = '2017-01-01', max = '2017-12-31', width = '100%'),
             selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%'))),
-        fluidRow(box(title = 'Deep Dive', plotlyOutput('deepDivePlots', width = 12, height = '60vh')))
+        fluidRow(box(title = 'Deep Dive', width = 12, plotlyOutput('deepDivePlots', height = '60vh')))
       ),
       tabItem(
         'states',
@@ -597,7 +597,7 @@ deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
 
 getMap <- function() {
   # Load the map
-  us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
+  us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'OGRGeoJSON')
   centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
   us@data <- join(us@data, flightsIL, by = 'iso3166_2', type = 'left')
   us@data[is.na(us@data)]<- 0
