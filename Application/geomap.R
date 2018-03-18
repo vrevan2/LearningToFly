@@ -6,7 +6,7 @@ library(tidyr)
 library(DT)
 
 
-library('maps')
+library('leaflet')
 #### Globals
 defaultTz <- "America/Chicago"
 
@@ -49,7 +49,7 @@ x<- leaflet() %>%  addTiles()
 
 for(i in 1:nrow(weather_sub)){
     x <- addPolylines(x, lat = as.numeric(weather_sub[i, c('Olat','Dlat' )]), 
-                               lng = as.numeric(weather_sub[i, c('Olong', 'Dlong')]) , label = paste(as.character(weather_sub[i,c('Freq')]) ," : " ,weather_sub[i,c('Origin')]) ,weight = 0.7 )
+                               lng = as.numeric(weather_sub[i, c('Olong', 'Dlong')]) , label = paste(as.character(weather_sub[i,c('Freq')]) ," : " ,weather_sub[i,c('Origin')]) ,weight = weather_sub[i,c('Freq')]/15 )
 }
 x<-addCircles(x,lng =origins$Olong,
              lat =origins$Olat,
