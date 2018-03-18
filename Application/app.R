@@ -12,13 +12,10 @@ library(maptools)
 library(maps)
 library(mapproj)
 
-#### Globals
-defaultTz <- 'America/Chicago'
-plotLabelSize <- 12
-
-#colors
+# Colors
 arrivalColor <- '#6a819d'
 departureColor <- '#e76e48'
+plotLabelSize <- 12
 
 daysOfWeek <- c('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 daysOfWeekDropDown <- c(1:7)
@@ -44,10 +41,13 @@ hoursDf <- function(is24Hour) {
 }
 
 distanceGroups <- function(isMetric) {
-  return(if (isMetric)
-    c(paste(c(0:7) * 400, 'to', c(1:8) * 400 - 1, 'km'), '3200+ km')
+  values <- (if (isMetric)
+    c(paste('~', c(1:8) * 400, 'km'), '> 3200 km')
     else
-      c(paste(c(0:7) * 250, 'to', c(1:8) * 250 - 1, 'miles'), '2000+ miles'))
+      c(paste('~', c(1:8) * 250, 'mi'), '> 2000 mi'))
+  
+  values[1] <- paste('0', values[1])
+  return(values)
 }
 distanceGroupDf <- function(isMetric) {
   dgdf <- data.frame(distanceGroups(isMetric), c(0:8))
@@ -142,6 +142,10 @@ flights$DistanceGroup[flights$DistanceGroup > 8] <- 8 # bin times more than 2000
 cancellations <- flights[flights$CancellationCode != '', ]
 flights <- flights[flights$CancellationCode == '', ]
 
+# Weather Data
+weather <- read.csv("data/mapweather.csv")
+originState = "IL"
+
 # Flights By State
 flightsFromIL <- count(subset(flights, OriginState == 'IL'), vars = 'DestState')
 colnames(flightsFromIL) <- c('iso3166_2', 'Departures')
@@ -155,14 +159,19 @@ flightsIL$Departures <- format(flightsIL$Departures, big.mark = ',', scientific 
 # Layout
 ui <- function() {
   dashboardPage(
-  dashboardHeader(title = 'R you Shiny'),
+  dashboardHeader(title = 'Learning to Fly'),
   dashboardSidebar(
     sidebarMenu(
-      menuItem('Home', tabName = 'home'),
+      menuItem('Home', tabName = 'preferences'),
       menuItem('Compare Airports', tabName = 'flightData'),
       menuItem('Deep Dive', tabName = 'deepDive'),
       menuItem('States', tabName = 'states'),
-      menuItem('About | Preferences', tabName = 'preferences')
+      menuItem(
+        'Preferences',
+        radioButtons('measurements', 'Measurements', inline = TRUE, c('Imperial', 'Metric')),
+        radioButtons('timeFormat', 'Time Format', inline = TRUE, c('12 hr', '24 hr')),
+        br(),
+        startExpanded = TRUE)
     )
   ),
   dashboardBody(
@@ -183,22 +192,15 @@ ui <- function() {
         });'
     )),
     tabItems(
-      tabItem('home', includeHTML('home.html')),
+      tabItem('insights', includeHTML('insights.html')),
       tabItem(
         'preferences',
-        fluidRow(column(
-          width = 12, h2('Preferences'),
-          radioButtons('measurements', 'Measurements', inline = TRUE, c('Imperial', 'Metric')),
-          radioButtons('timeFormat', 'Time Format', inline = TRUE, c('12 hr', '24 hr')),
-          hr()
-        )),
-        fluidRow(column(
-          width = 12, h2('About'), h3('R you Shiny'),
-          p('Interactive Visualization of Airline Flights in Illinois'),
-          a('Project Page', href = 'https://vrevan2.github.io/LearningToFly/', target = '_blank'),
-          hr(),
-          h3('Team'),
-          p('Amey Barapatre, Jaspreet Kaur Sohal, Sai Phaltankar and Vivek R. Shivaprabhu')
+        fluidRow(
+          column(width = 4, h2('About'),
+            p('Interactive Visualization of Airline Flights in Illinois'),
+            a('Project Page', href = 'https://vrevan2.github.io/LearningToFly/', target = '_blank'),
+            h2('Team "R you Shiny"'),
+            p('Amey Barapatre, Jaspreet Kaur Sohal, Sai Phaltankar and Vivek R. Shivaprabhu')
         ))
       ),
       tabItem(
@@ -474,6 +476,15 @@ top15AirportsPlot <- function(airport, stacked) {
     ) %>%
     layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize))
   )
+}
+
+deepDiveMap <- function(dateValue){
+  weather_sub <- subset(weather, Month == as.numeric(format(dateValue, "%m")) & DayofMonth == as.numeric(format(filterValue, "%d")) & OriginState == originState)
+  weatherFields = c("OPRCP", "OSNOW", "OSNWD", "OTMAX", "OTMIN", "OTAVG")
+  origins <- unique(weather_sub[,c('Olat', 'Olong', weatherFields, "Origin" )])
+  dests <- unique(weather_sub[,c('Dlat', 'Dlong', weatherFields, "Dest"  )])
+
+  x <- leaflet() %>% addTiles()  
 }
 
 deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
