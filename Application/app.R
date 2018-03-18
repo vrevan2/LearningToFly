@@ -609,15 +609,15 @@ getMap <- function() {
   
   pal <- colorNumeric(palette = 'Blues', domain = us@data$total)
   
-  return(leaflet(us) %>% 
+  return(leaflet(us, options = leafletOptions(minZoom = 3, maxZoom = 7)) %>% setView(-99.85447, 40.70358, zoom = 5) %>%
            addPolygons(color = 'gray', weight = 1, smoothFactor = 0.5,
                        opacity = 1.0, fillOpacity = 0.5,
                        fillColor = ~pal(us@data$total),
                        highlightOptions = highlightOptions(color = 'black', weight = 2, bringToFront = TRUE),
                        label = us@data$labels,
-                       labelOptions = labelOptions( style = list("font-weight" = "normal", padding = "3px 8px"), textsize = "15px", direction = "auto")
+                       labelOptions = labelOptions( style = list("font-weight" = "normal", "line-height" = "3vh", "padding"="1vh"), textsize = "3vh", direction = "auto")
            ) %>%
-           addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0))) %>%
+           addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0), textsize="2vh")) %>%
            addLegend(pal = pal, values = ~total, title = '# Flights')
          )
 }
