@@ -17,6 +17,12 @@ colorScale <- c('#A7CAF2', '#262E38')
 plotLabelSize <- 12
 plotMarginTop <- 40
 
+# Map
+zoomLevel <- 5
+lineOpacity <- 6
+lineWeight <- 2
+zoomLevelStates <- 3
+
 daysOfWeek <- c('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 daysOfWeekDropDown <- c(1:7)
 names(daysOfWeekDropDown) <- daysOfWeek
@@ -250,11 +256,13 @@ ui <- function() {
             selectInput('airportBreakdown', 'Target Airport', c(), width = '100%'),
             selectInput('airlineBreakdown', 'Airline', c(), width = '100%'),
             dateInput('dateBreakdown', 'Date', value = as.Date(format(Sys.Date(), '2017-%m-%d')), min = '2017-01-01', max = '2017-12-31', width = '100%'),
+
             selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%')),
           column(width = 3, radioButtons('breakdownPlotType', 'Plot Type', inline = TRUE, choiceValues = c('map', 'graph'), choiceNames = c('Map', 'Graph')))
         ),
         fluidRow(id = 'deepDiveGraph', box(width = 12, title = 'Number of Flights', plotlyOutput('deepDivePlots', height = '60vh'))),
-        fluidRow(id = 'deepDiveMap', box(width = 12, leafletOutput('deepDiveLeaflet', height = '70vh')))
+        fluidRow(id = 'deepDiveMap', box(width = 12, leafletOutput('deepDiveLeaflet', height = '30vh')))
+
 
       ),
       tabItem(
@@ -562,7 +570,7 @@ deepDiveMap <- function(dateValue, showDepartures, inMetric) {
   origins <- unique(weatherData[,c('Olat', 'Olong', "OPRCP", "OSNOW", "OSNWD", "OTMAX", "OTMIN", "OTAVG", "Origin" )])
   dests <- unique(weatherData[,c('Dlat', 'Dlong', "DPRCP", "DSNOW", "DSNWD", "DTMAX", "DTMIN", "DTAVG", "Dest"  )])
   
-  x <- leaflet() %>% addTiles()
+  x <- leaflet() %>% addTiles() %>% addProviderTiles(providers$CartoDB.Positron) %>% setView(lng = -97.696525, lat = 37.961656,  zoom = zoomLevel)
   
   for(i in 1:nrow(weatherData)){
     lbl <- paste(
@@ -571,10 +579,11 @@ deepDiveMap <- function(dateValue, showDepartures, inMetric) {
     
     x <- addPolylines(x, 
       lat = as.numeric(weatherData[i, c('Olat','Dlat' )]), lng = as.numeric(weatherData[i, c('Olong', 'Dlong')]), 
-      label = lbl, weight = weatherData[i,c('NoOfFlights')]/15, color = 'green' )
+      label = lbl, opacity = weatherData[i,c('NoOfFlights')]/lineOpacity, weight = lineWeight, color = '#3A60C6' , labelOptions = labelOptions(textsize = "1vh", 
+                                                                                                                        style = list("line-height" = "1.5vh")))
   }
-  x<-addCircles(x,
-    lng = origins$Olong, lat = origins$Olat, radius = 1, color = "red", fillColor = "red",
+  x<-addCircleMarkers(x,
+    lng = origins$Olong, lat = origins$Olat, radius = 5, color = "red", fillColor = "red",
     popup = paste0("<b>IATA : ",  origins$Origin,
                    "</b><br/>",  "<b>PRCP</b> : ",origins$OPRCP,
                    "<br/>", "<b>SNOW </b>: ", origins$OSNOW,
@@ -583,8 +592,8 @@ deepDiveMap <- function(dateValue, showDepartures, inMetric) {
                    "<br/>", "<b>TMIN </b>: ", sapply(origins$OTMAX, temperature, inMetric = inMetric),
                    "<br/>", "<b>TAVG </b>: ", sapply(origins$OTAVG, temperature, inMetric = inMetric)
   ))
-  x<-addCircles(x,
-    lng = dests$Dlong, lat = dests$Dlat, radius = 1, color = "red", fillColor = "red",
+  x<-addCircleMarkers(x,
+    lng = dests$Dlong, lat = dests$Dlat, radius = 5, color = "red", fillColor = "red",
     popup = paste0("<b>IATA : ",  dests$Dest,
                    "</b><br/>",  "<b>PRCP :</b> ", dests$DPRCP,
                    "<br/>", "<b>SNOW :</b> ", dests$DSNOW,
@@ -754,15 +763,15 @@ getMap <- function() {
   
   pal <- colorNumeric(palette = colorRamp(colorScale), domain = us@data$total)
   
-  return(leaflet(us, options = leafletOptions(minZoom = 3, maxZoom = 7)) %>% setView(-99.85447, 40.70358, zoom = 5) %>%
+  return(leaflet(us, options = leafletOptions(minZoom = 4, maxZoom = 7)) %>% setView(-99.85447, 40.70358, zoom = zoomLevelStates) %>%
            addPolygons(color = 'gray', weight = 1, smoothFactor = 0.5,
                        opacity = 1.0, fillOpacity = 0.8,
                        fillColor = ~pal(us@data$total),
                        highlightOptions = highlightOptions(color = 'black', weight = 2, bringToFront = TRUE),
                        label = us@data$labels,
-                       labelOptions = labelOptions( style = list("font-weight" = "normal", "line-height" = "3vh", "padding"="1vh"), textsize = "3vh", direction = "auto")
+                       labelOptions = labelOptions( style = list("font-weight" = "normal", "line-height" = "1.5vh"), textsize = "1.3vh", direction = "auto")
            ) %>%
-           addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0), textsize="2vh")) %>%
+           addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0), textsize="1.5vh")) %>%
            addLegend(pal = pal, values = ~total, title = '# Flights')
          )
 }
@@ -803,10 +812,18 @@ server <- function(input, output, session) {
     if(input$dimension[1] >= 2000){
       plotLabelSize <<- 25
       plotMarginTop <<- 100
+      zoomLevel <<- 6
+      lineOpacity <<- 4
+      lineWeight <<- 3
+      zoomLevelStates <<- 5.5
     }
     else{
       plotLabelSize <<- 12
       plotMarginTop <<- 40
+      zoomLevel <<- 5
+      lineOpacity <<- 8
+      lineWeight <<- 2
+      zoomLevelStates <<- 4.5
     }
   })
 

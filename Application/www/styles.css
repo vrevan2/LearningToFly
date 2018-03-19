@@ -82,6 +82,11 @@
   margin-top: 25px;
 }
 
+/*Leaflet Height*/
+.skin-blue #deepDiveLeaflet{
+  height: 70vh !important;
+}
+
 
 @media (min-width: 2000px){
     body * {
@@ -212,6 +217,18 @@
     .skin-blue div.box-header{
       padding-bottom: 30px;
     }
+    
+    .skin-blue .leaflet-popup-content{
+      font-size: 25px;
+    }
+    
+    .skin-blue h3.box-title{
+      font-size: 30px;
+    }
+    
+  /*  .skin-blue .legend svg text{
+      font-size: 30px;
+    }*/
     
 }
 
