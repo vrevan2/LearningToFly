@@ -233,16 +233,21 @@ ui <- function() {
           tabPanel(
             'Number of Flights',
             radioButtons('noOfFlightsBy', 'Plot by', inline = TRUE, c('Airline' = 'airline', 'Hour' = 'hour', 'Day of the Week' = 'day', 'Flight Time' = 'time', 'Distance' = 'distance')),
-            selectInput('monthBreakdown', 'Month', months, width = '50%'),
+            selectInput('monthBreakdownFlights', 'Month', months, width = '50%'),
             plotlyOutput('flightDataNumberOfFlights', height = '60vh'),
             DT::dataTableOutput("flightDataNumberOfFlightsTable")
             ),
           tabPanel(
             'Number of Delays',
-            plotlyOutput('flightDataNumberOfDelays', height = '70vh')),
+            plotlyOutput('flightDataNumberOfDelays', height = '70vh'),
+            selectInput('monthBreakdownDelays', 'Month', months, width = '50%'),
+            DT::dataTableOutput("flightDataNumberOfDelaysTable")),
           tabPanel(
             'Top 15 Destinations',
-            plotlyOutput('flightDataTop15Destinations', height = '70vh'))
+            plotlyOutput('flightDataTop15Destinations', height = '70vh'),
+            selectInput('monthBreakdownTop15', 'Month', months, width = '50%'),
+            DT::dataTableOutput("flightDataTop15DestinationsTable"))
+          
         ))
       ),
       tabItem(
@@ -432,57 +437,7 @@ flightDataNoOfFlightsTable <- function(airport1, airport2, pref, month, is24Hour
 }
 
 flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
-  groupBy <- c('Month', 'ArrHour')
-
-  delaysdata <- subset(flights, Dest == airport)
-  delays_TotalFlights <- count(delaysdata, groupBy)
-  colnames(delays_TotalFlights) <- c(groupBy, 'Total')
-
-  delays_NAS <- delaysdata[delaysdata$NASDelay != 0 & !is.na(delaysdata$NASDelay), ]
-  delays_NAS <- count(delays_NAS, groupBy)
-  colnames(delays_NAS) <- c(groupBy, 'NAS')
-
-  delays_Security <- delaysdata[delaysdata$SecurityDelay != 0 & !is.na(delaysdata$SecurityDelay), ]
-  delays_Security <- count(delays_Security, groupBy)
-  colnames(delays_Security) <- c(groupBy, 'Security')
-
-  delays_Weather <- delaysdata[delaysdata$WeatherDelay != 0 & !is.na(delaysdata$WeatherDelay), ]
-  delays_Weather <- count(delays_Weather, groupBy)
-  colnames(delays_Weather) <- c(groupBy, 'Weather')
-
-  delays_Carrier <- delaysdata[delaysdata$CarrierDelay != 0 & !is.na(delaysdata$CarrierDelay), ]
-  delays_Carrier <- count(delays_Carrier, groupBy)
-  colnames(delays_Carrier) <- c(groupBy, 'Carrier')
-
-  delays_LateAircraftDelay <- delaysdata[delaysdata$LateAircraftDelay != 0 & !is.na(delaysdata$LateAircraftDelay), ]
-  delays_LateAircraftDelay <- count(delays_LateAircraftDelay, groupBy)
-  colnames(delays_LateAircraftDelay) <- c(groupBy, 'LAD')
-
-  delays_Combined <- delaysdata[(delaysdata$NASDelay != 0 & !is.na(delaysdata$NASDelay))
-                                | (delaysdata$SecurityDelay != 0 & !is.na(delaysdata$SecurityDelay))
-                                | (delaysdata$WeatherDelay != 0 & !is.na(delaysdata$WeatherDelay))
-                                | (delaysdata$CarrierDelay != 0 & !is.na(delaysdata$CarrierDelay))
-                                | (delaysdata$LateAircraftDelay != 0 & !is.na(delaysdata$LateAircraftDelay)), ]
-  delays_Combined <- count(delays_Combined, groupBy)
-  colnames(delays_Combined) <- c(groupBy, 'Combined')
-
-  delays <- Reduce( function(x, y) merge(x, y, by = groupBy, all = TRUE),
-      list(delays_Carrier, delays_LateAircraftDelay, delays_NAS, delays_Security,
-        delays_Weather, delays_TotalFlights, delays_Combined))
-  delays$Percent <- delays$Combined * 100.00 / delays$Total
-
-  uniques <- expand.grid(c(0:23), c(1:12))
-  cols <- c('ArrHour', 'Month')
-  colnames(uniques) <- cols
-  delays <- merge(delays, uniques, by = cols, all = TRUE)
-
-  delays <- merge(delays, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
-  delays$MonthName <- ordered(delays$MonthName, months)
-
-  delays <- merge(delays, hoursDf(is24Hour), by.x = 'ArrHour', by.y = 'HourNumber', all = TRUE)
-  delays$HourName <- ordered(delays$HourName, hours(is24Hour))
-
-  delays[is.na(delays)] <- 0
+  delays<- flightDataNoOfDelaysDataFrame(airport, is24Hour)
   return(
     plot_ly(
       x = delays$HourName, 
@@ -520,24 +475,75 @@ flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
     )
 }
 
-top15AirportsPlot <- function(airport, stacked) {
-  top15AirportData <- getTopDestinations(airport, 15, getFlightData = TRUE)
-  groupBy <- c('Month', 'DestinationAirport')
-  counts <- count(top15AirportData, groupBy) # Total Flights
-
-  uniques <- expand.grid(unique(top15AirportData$DestinationAirport), c(1:12))
-  cols <- c('DestinationAirport', 'Month')
+flightDataNoOfDelaysDataFrame<- function(airport, is24Hour) {
+  groupBy <- c('Month', 'ArrHour')
+  
+  delaysdata <- subset(flights, Dest == airport)
+  delays_TotalFlights <- count(delaysdata, groupBy)
+  colnames(delays_TotalFlights) <- c(groupBy, 'Total')
+  
+  delays_NAS <- delaysdata[delaysdata$NASDelay != 0 & !is.na(delaysdata$NASDelay), ]
+  delays_NAS <- count(delays_NAS, groupBy)
+  colnames(delays_NAS) <- c(groupBy, 'NAS')
+  
+  delays_Security <- delaysdata[delaysdata$SecurityDelay != 0 & !is.na(delaysdata$SecurityDelay), ]
+  delays_Security <- count(delays_Security, groupBy)
+  colnames(delays_Security) <- c(groupBy, 'Security')
+  
+  delays_Weather <- delaysdata[delaysdata$WeatherDelay != 0 & !is.na(delaysdata$WeatherDelay), ]
+  delays_Weather <- count(delays_Weather, groupBy)
+  colnames(delays_Weather) <- c(groupBy, 'Weather')
+  
+  delays_Carrier <- delaysdata[delaysdata$CarrierDelay != 0 & !is.na(delaysdata$CarrierDelay), ]
+  delays_Carrier <- count(delays_Carrier, groupBy)
+  colnames(delays_Carrier) <- c(groupBy, 'Carrier')
+  
+  delays_LateAircraftDelay <- delaysdata[delaysdata$LateAircraftDelay != 0 & !is.na(delaysdata$LateAircraftDelay), ]
+  delays_LateAircraftDelay <- count(delays_LateAircraftDelay, groupBy)
+  colnames(delays_LateAircraftDelay) <- c(groupBy, 'LAD')
+  
+  delays_Combined <- delaysdata[(delaysdata$NASDelay != 0 & !is.na(delaysdata$NASDelay))
+                                | (delaysdata$SecurityDelay != 0 & !is.na(delaysdata$SecurityDelay))
+                                | (delaysdata$WeatherDelay != 0 & !is.na(delaysdata$WeatherDelay))
+                                | (delaysdata$CarrierDelay != 0 & !is.na(delaysdata$CarrierDelay))
+                                | (delaysdata$LateAircraftDelay != 0 & !is.na(delaysdata$LateAircraftDelay)), ]
+  delays_Combined <- count(delays_Combined, groupBy)
+  colnames(delays_Combined) <- c(groupBy, 'Combined')
+  
+  delays <- Reduce( function(x, y) merge(x, y, by = groupBy, all = TRUE),
+                    list(delays_Carrier, delays_LateAircraftDelay, delays_NAS, delays_Security,
+                         delays_Weather, delays_TotalFlights, delays_Combined))
+  delays$Percent <- delays$Combined * 100.00 / delays$Total
+  
+  uniques <- expand.grid(c(0:23), c(1:12))
+  cols <- c('ArrHour', 'Month')
   colnames(uniques) <- cols
-  counts <- merge(counts, uniques, by = cols, all = TRUE)
+  delays <- merge(delays, uniques, by = cols, all = TRUE)
+  
+  delays <- merge(delays, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
+  delays$MonthName <- ordered(delays$MonthName, months)
+  
+  delays <- merge(delays, hoursDf(is24Hour), by.x = 'ArrHour', by.y = 'HourNumber', all = TRUE)
+  delays$HourName <- ordered(delays$HourName, hours(is24Hour))
+  
+  delays[is.na(delays)] <- 0
+  
+  return(delays)
+}
 
-  counts <- merge(counts, count(top15AirportData[top15AirportData$Dest == airport, ], groupBy), by = groupBy, all = TRUE) # Arrivals
-  counts <- merge(counts, count(top15AirportData[top15AirportData$Origin == airport, ], groupBy), by = groupBy, all = TRUE) # Departures
-  colnames(counts) <- c(groupBy, 'Total_Flights', 'Arrivals', 'Departures')
-  counts <- merge(counts, airports, by.x = 'DestinationAirport', by.y = 'IATA', all.x = TRUE)
-  counts <- merge(counts, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
-  counts$MonthName <- ordered(counts$MonthName, months)
+flightDataNoOfDelaysTable <- function(airport, month, is24Hour) {
+  delays<- flightDataNoOfDelaysDataFrame(airport, is24Hour)
+  monthNo <- as.numeric(subset(monthsDf, MonthName == month)$MonthNumber)
+  delays<-subset(delays[delays$Month == monthNo,], select = -c(Month))
+  delays<-arrange(delays, ArrHour)
+  delays<-delays[,c(1,2,3,4,5,6,8,7,9)]
+  delays$Percent<-format(delays$Percent, digits=2, nsmall=2)
+  colnames(delays)<- c('Hour', 'Carrier Delays', 'Late Arrival Delays', 'National Airspace Sys. Delays', 'Security Delays', 'Weather Delays', 'Total Delays', 'Total Flights', 'Percent')
+  return(delays)
+}
 
-  counts[is.na(counts)] <- 0
+top15AirportsPlot <- function(airport, stacked) {
+  counts<-top15AirportsDataFrame(airport)
 
   return(plot_ly(
     x = counts$DestinationAirport, 
@@ -558,6 +564,32 @@ top15AirportsPlot <- function(airport, stacked) {
     ) %>%
     layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize), margin = list(t = plotMarginTop))
   )
+}
+
+top15AirportsDataFrame <- function(airport) {
+  top15AirportData <- getTopDestinations(airport, 15, getFlightData = TRUE)
+  groupBy <- c('Month', 'DestinationAirport')
+  counts <- count(top15AirportData, groupBy) # Total Flights
+  
+  uniques <- expand.grid(unique(top15AirportData$DestinationAirport), c(1:12))
+  cols <- c('DestinationAirport', 'Month')
+  colnames(uniques) <- cols
+  counts <- merge(counts, uniques, by = cols, all = TRUE)
+  
+  counts <- merge(counts, count(top15AirportData[top15AirportData$Dest == airport, ], groupBy), by = groupBy, all = TRUE) # Arrivals
+  counts <- merge(counts, count(top15AirportData[top15AirportData$Origin == airport, ], groupBy), by = groupBy, all = TRUE) # Departures
+  colnames(counts) <- c(groupBy, 'Total_Flights', 'Arrivals', 'Departures')
+  counts <- merge(counts, airports, by.x = 'DestinationAirport', by.y = 'IATA', all.x = TRUE)
+  counts <- merge(counts, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
+  counts$MonthName <- ordered(counts$MonthName, months)
+  
+  counts[is.na(counts)] <- 0
+  return(counts)
+}
+
+top15AirportsTable <- function(airport, month) {
+  counts<-top15AirportsDataFrame(airport)
+  
 }
 
 deepDiveMap <- function(dateValue, showDepartures, inMetric) {
@@ -857,14 +889,26 @@ server <- function(input, output, session) {
   })
   
   observe({
-    hide('monthBreakdown')
+    hide('monthBreakdownFlights')
     hide('flightDataNumberOfFlightsTable')
+    hide('monthBreakdownDelays')
+    hide('flightDataNumberOfDelaysTable')
+    hide('monthBreakdownTop15')
+    hide('flightDataTop15DestinationsTable')
   })
   
   observeEvent(input$flightDataTable, {
     toggle('flightDataNumberOfFlights')
     toggle('flightDataNumberOfFlightsTable')
-    toggle('monthBreakdown')
+    toggle('monthBreakdownFlights')
+    
+    toggle('monthBreakdownDelays')
+    toggle('flightDataNumberOfDelaysTable')
+    toggle('flightDataNumberOfDelays')
+    
+    toggle('monthBreakdownTop15')
+    toggle('flightDataTop15DestinationsTable')
+    toggle('flightDataTop15Destinations')
   })
 
   output$flightDataNumberOfFlights <- renderPlotly({
@@ -878,7 +922,7 @@ server <- function(input, output, session) {
   
   output$flightDataNumberOfFlightsTable <- DT::renderDataTable (
     DT::datatable({
-      flightDataNoOfFlightsTable(input$flightDataAirport1, input$flightDataAirport2, input$noOfFlightsBy, input$monthBreakdown, input$timeFormat == '24 hr', input$measurements == 'Metric')
+      flightDataNoOfFlightsTable(input$flightDataAirport1, input$flightDataAirport2, input$noOfFlightsBy, input$monthBreakdownFlights, input$timeFormat == '24 hr', input$measurements == 'Metric')
     },
     container = tableHeaderArrDep(input$flightDataAirport1, input$flightDataAirport2, input$noOfFlightsBy),
     rownames = FALSE,
@@ -894,6 +938,15 @@ server <- function(input, output, session) {
     ) %>%
       layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
   })
+  
+  output$flightDataNumberOfDelaysTable <- DT::renderDataTable (
+    DT::datatable({
+      flightDataNoOfDelaysTable(input$flightDataAirport1, input$monthBreakdownDelays, input$timeFormat == '24 hr')
+    },
+    rownames = FALSE,
+    options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
+    )
+  )
 
   output$flightDataTop15Destinations <- renderPlotly({
     subplot(
