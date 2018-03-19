@@ -78,7 +78,7 @@ distance <- function(x, inMetric) {
       paste(round(x * 0.039370, 1), 'in'))
 }
 
-tableHeaderArrDep <- function(airport1, airport2, tableName) {
+tableHeaderTwoAirports <- function(airport1, airport2, tableName, tabletype) {
   colName<-switch(
     tableName,
     'airline' = 'Airline',
@@ -86,37 +86,23 @@ tableHeaderArrDep <- function(airport1, airport2, tableName) {
     'day' = 'Day',
     'time' = 'Flight Time',
     'distance' = 'Distance',
-    'top15' = 'Airports'
+    'top15' = 'Rank'
+  )
+  subheaders<-switch(
+    tabletype,
+    'noOfFlights' = c('Arrivals', 'Departures'),
+    'delays' = c('Carrier', 'Late Arr.', 'NAS', 'Security', 'Weather', 'Total', 'Percent' ),
+    'top15' = c('Airport','Arrivals', 'Departures')
   )
   return(htmltools::withTags(table(class = 'display', thead(class = "center",
     tr(
       th(rowspan = 2, colName),
-      th(colspan = 2, airport1),
-      th(colspan = 2, airport2)
+      th(colspan = as.numeric(length(subheaders)), airport1),
+      th(colspan = as.numeric(length(subheaders)), airport2)
     ), tr(lapply(rep(
-      c('Arrivals', 'Departures'), 2
+      subheaders, 2
     ), th))
   ))))
-}
-
-tableHeaderTop15 <- function(airport1, airport2, tableName) {
-  return(htmltools::withTags(table(class = 'display', thead(class = "center",
-    tr(
-      th(rowspan = 2, 'Rank'),
-      th(colspan = 3, airport1),
-      th(colspan = 3, airport2)
-    ), tr(lapply(rep(
-      c('Airport','Arrivals', 'Departures'), 2
-    ), th))
-  ))))
-}
-
-tableHeaderTwoAirports <- function(airport1, airport2, tableName) {
-  return(htmltools::withTags(table(class = 'display', thead(tr(
-    th(tableName),
-    th(airport1),
-    th(airport2)
-  )))))
 }
 
 tableHeaderOneAirport <- function(airport1, airport2, tableName) {
@@ -558,14 +544,23 @@ flightDataNoOfDelaysDataFrame<- function(airport, is24Hour) {
   return(delays)
 }
 
-flightDataNoOfDelaysTable <- function(airport, month, is24Hour) {
-  delays<- flightDataNoOfDelaysDataFrame(airport, is24Hour)
+flightDataNoOfDelaysTable <- function(airport1, airport2, month, is24Hour) {
   monthNo <- as.numeric(subset(monthsDf, MonthName == month)$MonthNumber)
-  delays<-subset(delays[delays$Month == monthNo,], select = -c(Month))
-  delays<-arrange(delays, ArrHour)
-  delays<-delays[,c(1,2,3,4,5,6,8,7,9)]
-  delays$Percent<-as.numeric(format(delays$Percent, digits=2, nsmall=2))
-  colnames(delays)<- c('Hour', 'Carrier Delays', 'Late Arrival Delays', 'National Airspace Sys. Delays', 'Security Delays', 'Weather Delays', 'Total Delays', 'Total Flights', 'Percent')
+  
+  delays1<- flightDataNoOfDelaysDataFrame(airport1, is24Hour)
+  delays1<-subset(delays1[delays1$Month == monthNo,], select = -c(Month))
+  delays1<-arrange(delays1, ArrHour)
+  delays1<-delays1[,c(11,2,3,4,5,6,8,9)]
+  delays1$Percent<-as.numeric(format(delays1$Percent, digits=2, nsmall=2))
+  
+  delays2<- flightDataNoOfDelaysDataFrame(airport2, is24Hour)
+  delays2<-subset(delays2[delays2$Month == monthNo,], select = -c(Month))
+  delays2<-arrange(delays2, ArrHour)
+  delays2<-delays2[,c(11,2,3,4,5,6,8,9)]
+  delays2$Percent<-as.numeric(format(delays2$Percent, digits=2, nsmall=2))
+  
+  delays<-merge(delays1, delays2, by='HourName', sort = F)
+  # colnames(delays)<- c('Hour', 'Carrier Delays', 'Late Arrival Delays', 'National Airspace Sys. Delays', 'Security Delays', 'Weather Delays', 'Total Delays', 'Total Flights', 'Percent')
   return(delays)
 }
 
@@ -1002,7 +997,7 @@ server <- function(input, output, session) {
     DT::datatable({
       flightDataNoOfFlightsTable(input$flightDataAirport1, input$flightDataAirport2, input$noOfFlightsBy, input$monthBreakdownFlights, input$timeFormat == '24 hr', input$measurements == 'Metric')
     },
-    container = tableHeaderArrDep(input$flightDataAirport1, input$flightDataAirport2, input$noOfFlightsBy),
+    container = tableHeaderTwoAirports(input$flightDataAirport1, input$flightDataAirport2, input$noOfFlightsBy, 'noOfFlights'),
     rownames = FALSE,
     options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
     )
@@ -1019,8 +1014,9 @@ server <- function(input, output, session) {
   
   output$flightDataNumberOfDelaysTable <- DT::renderDataTable (
     DT::datatable({
-      flightDataNoOfDelaysTable(input$flightDataAirport1, input$monthBreakdownDelays, input$timeFormat == '24 hr')
+      flightDataNoOfDelaysTable(input$flightDataAirport1, input$flightDataAirport2, input$monthBreakdownDelays, input$timeFormat == '24 hr')
     },
+    container = tableHeaderTwoAirports(input$flightDataAirport1, input$flightDataAirport2, 'hour', 'delays'),
     rownames = FALSE,
     options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
     )
@@ -1039,7 +1035,7 @@ server <- function(input, output, session) {
     DT::datatable({
       top15AirportsTable(input$flightDataAirport1, input$flightDataAirport2, input$monthBreakdownTop15)
     },
-    container = tableHeaderTop15(input$flightDataAirport1, input$flightDataAirport2, 'top15'),
+    container = tableHeaderTwoAirports(input$flightDataAirport1, input$flightDataAirport2, 'top15', 'top15'),
     rownames = FALSE,
     options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
     )
