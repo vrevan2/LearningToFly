@@ -62,7 +62,17 @@ distanceGroupDf <- function(isMetric) {
 }
 
 temperature <- function(x, inMetric) {
-  return (if (inMetric) x / 10.0 else ((x / 10.0) * 9 / 5) + 32)
+  return (if (inMetric) 
+      paste(round(x / 10.0, 1), '&deg;C')
+    else 
+      paste(round(((x / 10.0) * 9 / 5) + 32, 1), '&deg;F'))
+}
+
+distance <- function(x, inMetric) {
+  return (if (inMetric)
+      paste(round(x, 0), 'mm')
+    else
+      paste(round(x * 0.039370, 1), 'in'))
 }
 
 tableHeaderArrDep <- function(airport1, airport2, tableName) {
@@ -279,9 +289,10 @@ ui <- function() {
           column(width = 3, radioButtons('breakdownPlotType', 'Plot Type', inline = TRUE, choiceValues = c('map', 'graph'), choiceNames = c('Map', 'Graph')))
         ),
         fluidRow(id = 'deepDiveGraph', box(width = 12, title = 'Number of Flights', plotlyOutput('deepDivePlots', height = '60vh'))),
-        fluidRow(id = 'deepDiveMap', box(width = 12, leafletOutput('deepDiveLeaflet', height = '30vh')))
-
-
+        fluidRow(id = 'deepDiveMap', box(width = 12,
+          radioButtons('deepDiveMapDirection', 'Show flights', c('Leaving IL' = 'departures', 'Entering IL' = 'arrivals'), inline = TRUE),
+          p('Click on airports (circles) to view weather for the day. Hover over the flight-paths (lines) to view number of flights and cancellations.'),
+          leafletOutput('deepDiveLeaflet')))
       ),
       tabItem(
         'states',
@@ -442,7 +453,7 @@ flightDataNoOfFlightsTable <- function(airport1, airport2, pref, month, is24Hour
   
   arrDep <- merge(arrDep1, arrDep2, by = c(colName, 'Month'), all = T)
   if(pref == 'airline') {
-    arrDep$AirlineCode<-names(getAirlineCodePlusNames(arrDep$AirlineCode))
+    arrDep$AirlineCode <- names(getAirlineCodePlusNames(arrDep$AirlineCode))
   }
   arrDep <- arrDep[,c(colName, 'Frequency.x.x', 'Frequency.x.y', 'Frequency.y.x', 'Frequency.y.y', 'Month')]
   arrDep[is.na(arrDep)] <- 0
@@ -628,7 +639,7 @@ deepDiveMap <- function(dateValue, showDepartures, inMetric) {
   origins <- unique(weatherData[,c('Olat', 'Olong', "OPRCP", "OSNOW", "OSNWD", "OTMAX", "OTMIN", "OTAVG", "Origin" )])
   dests <- unique(weatherData[,c('Dlat', 'Dlong', "DPRCP", "DSNOW", "DSNWD", "DTMAX", "DTMIN", "DTAVG", "Dest"  )])
   
-  x <- leaflet() %>% addTiles() %>% addProviderTiles(providers$CartoDB.Positron) %>% setView(lng = -97.696525, lat = 37.961656,  zoom = zoomLevel)
+  x <- leaflet() %>% addTiles() %>% addProviderTiles(providers$CartoDB.Positron) %>% setView(lng = -97.696525, lat = 37.961656, zoom = zoomLevel)
   
   for(i in 1:nrow(weatherData)){
     lbl <- paste(
@@ -637,30 +648,62 @@ deepDiveMap <- function(dateValue, showDepartures, inMetric) {
     
     x <- addPolylines(x, 
       lat = as.numeric(weatherData[i, c('Olat','Dlat' )]), lng = as.numeric(weatherData[i, c('Olong', 'Dlong')]), 
-      label = lbl, opacity = weatherData[i,c('NoOfFlights')]/lineOpacity, weight = lineWeight, color = '#3A60C6' , labelOptions = labelOptions(textsize = "1vh", 
-                                                                                                                        style = list("line-height" = "1.5vh")))
+      label = lbl, opacity = weatherData[i,c('NoOfFlights')] / lineOpacity, weight = lineWeight, color = '#3A60C6',
+      labelOptions = labelOptions(textsize = "1vh", style = list("line-height" = "1.5vh")))
   }
-  x<-addCircleMarkers(x,
-    lng = origins$Olong, lat = origins$Olat, radius = 5, color = "red", fillColor = "red",
-    popup = paste0("<b>IATA : ",  origins$Origin,
-                   "</b><br/>",  "<b>PRCP</b> : ",origins$OPRCP,
-                   "<br/>", "<b>SNOW </b>: ", origins$OSNOW,
-                   "<br/>", "<b>SNWD </b>: ", origins$OSNWD,
-                   "<br/>", "<b>TMAX </b>: ", sapply(origins$OTMIN, temperature, inMetric = inMetric),
-                   "<br/>", "<b>TMIN </b>: ", sapply(origins$OTMAX, temperature, inMetric = inMetric),
-                   "<br/>", "<b>TAVG </b>: ", sapply(origins$OTAVG, temperature, inMetric = inMetric)
-  ))
-  x<-addCircleMarkers(x,
-    lng = dests$Dlong, lat = dests$Dlat, radius = 5, color = "red", fillColor = "red",
-    popup = paste0("<b>IATA : ",  dests$Dest,
-                   "</b><br/>",  "<b>PRCP :</b> ", dests$DPRCP,
-                   "<br/>", "<b>SNOW :</b> ", dests$DSNOW,
-                   "<br/>", "<b>SNWD : </b>", dests$DSNWD,
-                   "<br/>", "<b>TMAX : </b>", sapply(dests$DTMIN, temperature, inMetric = inMetric),
-                   "<br/>", "<b>TMIN : </b>", sapply(dests$DTMAX, temperature, inMetric = inMetric),
-                   "<br/>", "<b>TAVG : </b>", sapply(dests$DTAVG, temperature, inMetric = inMetric)
-  ))
+  
+  originWeather <- mapply(getWeatherDetails, origins$Origin, origins$OPRCP, origins$OSNOW, origins$OSNWD, origins$OTMIN, origins$OTMAX, origins$OTAVG, inMetric)
+  origins$WeatherLabel <- mapply(getWeatherLabelMarker, origins[, 'OTAVG'], origins[, 'OTMAX'], origins[, 'OTMIN'], inMetric) %>% lapply(htmltools::HTML)
+
+  destWeather <- mapply(getWeatherDetails, dests$Dest, dests$DPRCP, dests$DSNOW, dests$DSNWD, dests$DTMIN, dests$DTMAX, dests$DTAVG, inMetric)
+  dests$WeatherLabel <- mapply(getWeatherLabelMarker, dests[, 'DTAVG'], dests[, 'DTMAX'], dests[, 'DTMIN'], inMetric) %>% lapply(htmltools::HTML)
+  
+  print(dests$WeatherLabel)
+
+  x <- addCircleMarkers(x, lng = origins$Olong, lat = origins$Olat, radius = 5, color = "red", fillColor = "red", popup = originWeather)
+  x <- addCircleMarkers(x, lng = dests$Dlong, lat = dests$Dlat, radius = 5, color = "red", fillColor = "red", popup = destWeather)
+  x <- addLabelOnlyMarkers(x, lng = origins$Olong, lat = origins$Olat, label = origins$WeatherLabel, labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T))
+  x <- addLabelOnlyMarkers(x, lng = dests$Dlong, lat = dests$Dlat, label = dests$WeatherLabel, labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T))
   return(x)
+}
+
+getWeatherLabelMarker <- function(avgValue, maxValue, minValue, inMetric) {
+  val <- if(!is.na(avgValue)) avgValue
+  else if(!is.na(maxValue)) maxValue
+  else if(!is.na(minValue)) minValue
+  else NA
+  
+  return(if(is.na(val)) '' else temperature(val, inMetric))
+}
+
+getWeatherDetails <- function(iata, prcp, snow, snwd, tmin, tmax, tavg, inMetric) {
+  result <- paste0('<b>', names(getAirportCodePlusNames(as.character(iata))), '</b><br/>')
+  
+  hasTemp <- FALSE
+  if(!is.na(tmin) & tmin > 0) {
+    hasTemp <- TRUE
+    result <- paste(result, temperature(tmin, inMetric)) # Temperature is in tenths of C
+  }
+  if(!is.na(tmin) & tmin > 0 & !is.na(tmax) & tmax > 0)
+    result <- paste(result, '/')
+  if(!is.na(tmax) & tmax > 0) {
+    hsTemp <- TRUE
+    result <- paste(result, '<b>', temperature(tmax, inMetric), '</b>') # Temperature is in tenths of C
+  }
+  
+  if(!hasTemp & !is.na(tavg) & tavg > 0)
+    result <- paste(result, temperature(tmin, inMetric))
+  
+  if(!is.na(prcp) & prcp > 0)
+    result <- paste(result, '<br/>Rainfall:', distance(prcp / 10.0, inMetric)) # Precipitation is in tenths of mm
+  
+  if(!is.na(snow) & snow > 0)
+    result <- paste(result, '<br/>Snowfall:', distance(snow, inMetric)) # Snowfall is in mm
+  
+  if(!is.na(snwd) & snwd > 0)
+    result <- paste(result, '<br/>Snow depth:', distance(snwd, inMetric)) # Snow depth is in mm
+  
+  return(result)
 }
 
 getDeepDiveCounts <- function(airport, choice, filterValue, monthly, is24Hour) {
@@ -1005,7 +1048,9 @@ server <- function(input, output, session) {
     deepDivePlot(input$breakdownSourceAirport, input$breakdownRadioButton, filterValue, input$breakdownPlotType, input$timeFormat == '24 hr')
   })
   
-  output$deepDiveLeaflet <- renderLeaflet({ deepDiveMap(input$dateBreakdown, showDepartures = TRUE, inMetric = input$measurements == 'Metric') })
+  output$deepDiveLeaflet <- renderLeaflet({ deepDiveMap(input$dateBreakdown, 
+                                                        showDepartures = input$deepDiveMapDirection == 'departures', 
+                                                        inMetric = input$measurements == 'Metric') })
   
   output$mapFlightsToFromIL <- renderLeaflet({ getMap() })
 }
