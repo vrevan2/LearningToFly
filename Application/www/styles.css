@@ -307,11 +307,15 @@
       font-size: 30px;
     }
     
-
-  /*  .skin-blue .legend svg text{
-      font-size: 30px;
-    }*/
+/*    .skin-blue #mapFlightsToFromIL .legend{
+      font-size: 25px;
+    }
     
+    
+    .skin-blue #mapFlightsToFromIL .legend .leaflet-control span{
+      height: 200px;
+    }*/
+
     /*Table heading bottom*/
     .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(1){
       border-bottom-width: 13px;
