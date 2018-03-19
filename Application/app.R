@@ -665,8 +665,8 @@ deepDiveMap <- function(dateValue, showDepartures, inMetric) {
 
   x <- addCircleMarkers(x, lng = origins$Olong, lat = origins$Olat, radius = 5, color = "red", fillColor = "red", popup = originWeather)
   x <- addCircleMarkers(x, lng = dests$Dlong, lat = dests$Dlat, radius = 5, color = "red", fillColor = "red", popup = destWeather)
-  x <- addLabelOnlyMarkers(x, lng = origins$Olong, lat = origins$Olat, label = origins$WeatherLabel, labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T))
-  x <- addLabelOnlyMarkers(x, lng = dests$Dlong, lat = dests$Dlat, label = dests$WeatherLabel, labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T))
+  x <- addLabelOnlyMarkers(x, lng = origins$Olong, lat = origins$Olat, label = origins$WeatherLabel, labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T, textsize = "1vh"))
+  x <- addLabelOnlyMarkers(x, lng = dests$Dlong, lat = dests$Dlat, label = dests$WeatherLabel, labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T, textsize = "1vh"))
   return(x)
 }
 
