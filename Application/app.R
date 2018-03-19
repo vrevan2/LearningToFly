@@ -60,9 +60,17 @@ temperature <- function(x, inMetric) {
 }
 
 tableHeaderArrDep <- function(airport1, airport2, tableName) {
+  colName<-switch(
+    tableName,
+    'airline' = 'Airline',
+    'hour' = 'Hour', # Use ArrHour or DepHour appropriately
+    'day' = 'Day',
+    'time' = 'Flight Time',
+    'distance' = 'Distance'
+  )
   return(htmltools::withTags(table(class = 'display', thead(
     tr(
-      th(rowspan = 2, tableName),
+      th(rowspan = 2, colName),
       th(colspan = 2, airport1),
       th(colspan = 2, airport2)
     ), tr(lapply(rep(
@@ -219,7 +227,10 @@ ui <- function() {
           tabPanel(
             'Number of Flights',
             radioButtons('noOfFlightsBy', 'Plot by', inline = TRUE, c('Airline' = 'airline', 'Hour' = 'hour', 'Day of the Week' = 'day', 'Flight Time' = 'time', 'Distance' = 'distance')),
-            plotlyOutput('flightDataNumberOfFlights', height = '60vh')),
+            selectInput('monthBreakdown', 'Month', months, width = '50%'),
+            plotlyOutput('flightDataNumberOfFlights', height = '60vh'),
+            DT::dataTableOutput("flightDataNumberOfFlightsTable")
+            ),
           tabPanel(
             'Number of Delays',
             plotlyOutput('flightDataNumberOfDelays', height = '70vh')),
@@ -256,65 +267,7 @@ ui <- function() {
 }
 
 flightDataNoOfFlightsPlot <- function(pref, airport, stacked, is24Hour, isMetric) {
-  byGroup <- c('Month', switch(
-    pref,
-    'airline' = 'AirlineID',
-    'hour' = 'Hour', # Use ArrHour or DepHour appropriately
-    'day' = 'DayOfWeek',
-    'time' = 'CRSElapsedTimeGroup',
-    'distance' = 'DistanceGroup'
-  ))
-
-  arrival <- count(subset(flights, Dest == airport), if(pref == 'hour') c('Month', 'ArrHour') else byGroup)
-  colnames(arrival) <- c(byGroup, 'Frequency')
-
-  departure <- count(subset(flights, Origin == airport), if(pref == 'hour') c('Month', 'DepHour') else byGroup)
-  colnames(departure) <- c(byGroup, 'Frequency')
-
-  arrDep <- merge(arrival, departure, by = byGroup, all = TRUE)
-
-  if (pref == 'airline') {
-    uniques <- expand.grid(unique(arrDep$AirlineID), c(1:12))
-    cols <- c('AirlineID', 'Month')
-    colnames(uniques) <- cols
-    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
-    arrDep <- merge(arrDep, airlines, by = 'AirlineID', all.x = TRUE)
-  } else
-  if (pref == 'hour') {
-    uniques <- expand.grid(c(0:23), c(1:12))
-    cols <- c('Hour', 'Month')
-    colnames(uniques) <- cols
-    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
-    arrDep <- merge(arrDep, hoursDf(is24Hour), by.x = 'Hour', by.y = 'HourNumber', all = TRUE)
-    arrDep$HourName <- ordered(arrDep$HourName, hours(is24Hour))
-  } else
-  if (pref == 'day') {
-    uniques <- expand.grid(c(1:7), c(1:12))
-    cols <- c('DayOfWeek', 'Month')
-    colnames(uniques) <- cols
-    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
-    arrDep <- merge(arrDep, daysOfWeekDf, by.x = 'DayOfWeek', by.y = 'DayNumber', all = TRUE)
-    arrDep$DayName <- ordered(arrDep$DayName, daysOfWeek)
-  } else
-  if (pref == 'time') {
-    uniques <- expand.grid(c(0:5), c(1:12))
-    cols <- c('CRSElapsedTimeGroup', 'Month')
-    colnames(uniques) <- cols
-    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
-    arrDep <- merge(arrDep, timesDf, by.x = 'CRSElapsedTimeGroup', by.y = 'TimeNumber', all = TRUE)
-    arrDep$TimeName <- ordered(arrDep$TimeName, times)
-  } else
-  if (pref == 'distance') {
-    uniques <- expand.grid(c(0:8), c(1:12))
-    cols <- c('DistanceGroup', 'Month')
-    colnames(uniques) <- cols
-    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
-    arrDep <- merge(arrDep, distanceGroupDf(isMetric), by.x = 'DistanceGroup', by.y = 'DistanceNumber', all = TRUE)
-    arrDep$DistanceName <- ordered(arrDep$DistanceName, distanceGroups(isMetric))
-  }
-  arrDep[is.na(arrDep)] <- 0
-  arrDep <- merge(arrDep, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
-  arrDep$MonthName <- ordered(arrDep$MonthName, months)
+  arrDep <- flightDataNoOfFlightsDataFrame(pref, airport, is24Hour, isMetric)
 
   xCol <- switch(
     pref,
@@ -353,9 +306,121 @@ flightDataNoOfFlightsPlot <- function(pref, airport, stacked, is24Hour, isMetric
         marker = list(color = departureColor)
       ) %>%
 
-      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize), margin = list(t = plotMarginTop),
+      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize),
              yaxis = list(range = c(0, max(max(arrDep$Frequency.x), max(arrDep$Frequency.y)))))
   )
+}
+
+flightDataNoOfFlightsDataFrame <- function(pref, airport, is24Hour, isMetric) {
+  byGroup <- c('Month', switch(
+    pref,
+    'airline' = 'AirlineID',
+    'hour' = 'Hour', # Use ArrHour or DepHour appropriately
+    'day' = 'DayOfWeek',
+    'time' = 'CRSElapsedTimeGroup',
+    'distance' = 'DistanceGroup'
+  ))
+  
+  arrival <- count(subset(flights, Dest == airport), if(pref == 'hour') c('Month', 'ArrHour') else byGroup)
+  colnames(arrival) <- c(byGroup, 'Frequency')
+  
+  departure <- count(subset(flights, Origin == airport), if(pref == 'hour') c('Month', 'DepHour') else byGroup)
+  colnames(departure) <- c(byGroup, 'Frequency')
+  
+  arrDep <- merge(arrival, departure, by = byGroup, all = TRUE)
+  
+  if (pref == 'airline') {
+    uniques <- expand.grid(unique(arrDep$AirlineID), c(1:12))
+    cols <- c('AirlineID', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <-
+      merge(arrDep, airlines, by = 'AirlineID', all.x = TRUE)
+  } else
+  if (pref == 'hour') {
+    uniques <- expand.grid(c(0:23), c(1:12))
+    cols <- c('Hour', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <-
+      merge(
+        arrDep,
+        hoursDf(is24Hour),
+        by.x = 'Hour',
+        by.y = 'HourNumber',
+        all = TRUE
+      )
+    arrDep$HourName <- ordered(arrDep$HourName, hours(is24Hour))
+  } else
+  if (pref == 'day') {
+    uniques <- expand.grid(c(1:7), c(1:12))
+    cols <- c('DayOfWeek', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <-
+      merge(arrDep,
+            daysOfWeekDf,
+            by.x = 'DayOfWeek',
+            by.y = 'DayNumber',
+            all = TRUE)
+    arrDep$DayName <- ordered(arrDep$DayName, daysOfWeek)
+  } else
+  if (pref == 'time') {
+    uniques <- expand.grid(c(0:5), c(1:12))
+    cols <- c('CRSElapsedTimeGroup', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <-
+      merge(arrDep,
+            timesDf,
+            by.x = 'CRSElapsedTimeGroup',
+            by.y = 'TimeNumber',
+            all = TRUE)
+    arrDep$TimeName <- ordered(arrDep$TimeName, times)
+  } else
+  if (pref == 'distance') {
+    uniques <- expand.grid(c(0:8), c(1:12))
+    cols <- c('DistanceGroup', 'Month')
+    colnames(uniques) <- cols
+    arrDep <- merge(arrDep, uniques, by = cols, all = TRUE)
+    arrDep <-
+      merge(
+        arrDep,
+        distanceGroupDf(isMetric),
+        by.x = 'DistanceGroup',
+        by.y = 'DistanceNumber',
+        all = TRUE
+      )
+    arrDep$DistanceName <-
+      ordered(arrDep$DistanceName, distanceGroups(isMetric))
+  }
+  arrDep[is.na(arrDep)] <- 0
+  arrDep <- merge(arrDep, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
+  arrDep$MonthName <- ordered(arrDep$MonthName, months)
+  return(arrDep)
+}
+
+flightDataNoOfFlightsTable <- function(airport1, airport2, pref, month, is24Hour, isMetric) {
+  colName<-switch(
+    pref,
+    'airline' = 'AirlineCode',
+    'hour' = 'HourName', # Use ArrHour or DepHour appropriately
+    'day' = 'DayName',
+    'time' = 'TimeName',
+    'distance' = 'DistanceName'
+  )
+  monthNo <- as.numeric(subset(monthsDf, MonthName == month)$MonthNumber)
+  
+  arrDep1 <- flightDataNoOfFlightsDataFrame(pref, airport1, is24Hour, isMetric)
+  arrDep2 <- flightDataNoOfFlightsDataFrame(pref, airport2, is24Hour, isMetric)
+  
+  arrDep <- merge(arrDep1, arrDep2, by = c(colName, 'Month'), all = T)
+  if(pref == 'airline') {
+    arrDep$AirlineCode<-names(getAirlineCodePlusNames(arrDep$AirlineCode))
+  }
+  arrDep <- arrDep[,c(colName, 'Frequency.x.x', 'Frequency.x.y', 'Frequency.y.x', 'Frequency.y.y', 'Month')]
+  arrDep[is.na(arrDep)] <- 0
+  return(subset(arrDep[arrDep$Month == monthNo,], select = -c(Month)))
 }
 
 flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
@@ -773,6 +838,17 @@ server <- function(input, output, session) {
     breakdownAirlines <- getTopAirlines(input$breakdownSourceAirport, 50)
     updateSelectInput(session, 'airlineBreakdown', choices = getAirlineCodePlusNames(breakdownAirlines))
   })
+  
+  observe({
+    hide('monthBreakdown')
+    hide('flightDataNumberOfFlightsTable')
+  })
+  
+  observeEvent(input$flightDataTable, {
+    toggle('flightDataNumberOfFlights')
+    toggle('flightDataNumberOfFlightsTable')
+    toggle('monthBreakdown')
+  })
 
   output$flightDataNumberOfFlights <- renderPlotly({
     subplot(
@@ -782,6 +858,16 @@ server <- function(input, output, session) {
     ) %>%
       layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
   })
+  
+  output$flightDataNumberOfFlightsTable <- DT::renderDataTable (
+    DT::datatable({
+      flightDataNoOfFlightsTable(input$flightDataAirport1, input$flightDataAirport2, input$noOfFlightsBy, input$monthBreakdown, input$timeFormat == '24 hr', input$measurements == 'Metric')
+    },
+    container = tableHeaderArrDep(input$flightDataAirport1, input$flightDataAirport2, input$noOfFlightsBy),
+    rownames = FALSE,
+    options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
+    )
+  )
 
   output$flightDataNumberOfDelays <- renderPlotly({
     subplot(
