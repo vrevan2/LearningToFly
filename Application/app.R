@@ -620,9 +620,11 @@ top15AirportsTable <- function(airport1, airport2, month) {
   counts2<-counts2[order(-counts2$Total_Flights),]
   counts1<-counts1[,c(6,3,4)]
   counts2<-counts2[,c(6,3,4)]
-  counts<-cbind(counts1, counts2)
-  Rank<-1:15
-  counts<-cbind(Rank, counts)
+  counts1$rn<-as.numeric(rownames(counts1))
+  counts2$rn<-as.numeric(rownames(counts2))
+  counts<-merge(counts1, counts2, by='rn', all = TRUE)
+  # Rank<-1:length(counts)
+  # counts<-cbind(Rank, counts)
   return(counts)
   
 }
