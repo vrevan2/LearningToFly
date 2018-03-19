@@ -74,7 +74,7 @@ tableHeaderArrDep <- function(airport1, airport2, tableName) {
     'time' = 'Flight Time',
     'distance' = 'Distance'
   )
-  return(htmltools::withTags(table(class = 'display', thead(
+  return(htmltools::withTags(table(class = 'display', thead(class = "center",
     tr(
       th(rowspan = 2, colName),
       th(colspan = 2, airport1),
@@ -225,7 +225,7 @@ ui <- function() {
           column(width = 4, selectInput('flightDataAirport2', 'Airport 2', airportList, width = '100%', selected = 'MDW')),
           column(width = 1, checkboxInput('flightDataStacked', 'Stacked_Bars')),
           column(width = 1, checkboxInput('flightDataCompare', 'Compare')),
-          column(width = 1, actionButton('flightDataTable', 'Show Data'))
+          column(width = 1, actionButton('flightDataTable', 'Toggle Data'))
         ),
         fluidRow(tabBox(
           id = 'flightDataTabs',
@@ -319,7 +319,7 @@ flightDataNoOfFlightsPlot <- function(pref, airport, stacked, is24Hour, isMetric
         marker = list(color = departureColor)
       ) %>%
 
-      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize),
+      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize), margin = list(t = plotMarginTop),
              yaxis = list(range = c(0, max(max(arrDep$Frequency.x), max(arrDep$Frequency.y)))))
   )
 }
@@ -782,7 +782,7 @@ deepDivePlot <- function(airport, choice, filterValue, plotType, is24Hour) {
 getMap <- function() {
   # Load the map
 
-  us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
+  us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'OGRGeoJSON')
 
   centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
   us@data <- join(us@data, flightsIL, by = 'iso3166_2', type = 'left')
@@ -843,7 +843,7 @@ server <- function(input, output, session) {
   observeEvent(input$dimension, {
     if(input$dimension[1] >= 2000){
       plotLabelSize <<- 25
-      plotMarginTop <<- 100
+      plotMarginTop <<- 150
       zoomLevel <<- 6
       lineOpacity <<- 4
       lineWeight <<- 3

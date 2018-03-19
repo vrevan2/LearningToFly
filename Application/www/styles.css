@@ -87,6 +87,26 @@
   height: 70vh !important;
 }
 
+.skin-blue .center *{
+    text-align: center;
+}
+    
+    
+.skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(1){
+  border-bottom: 8px solid #6a819d;
+}
+
+.skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(2){
+  border-bottom: 8px solid #e76e48;
+}
+
+.skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(3){
+  border-bottom: 8px solid #6a819d;
+}
+
+.skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(4){
+  border-bottom: 8px solid #e76e48;
+}
 
 @media (min-width: 2000px){
     body * {
@@ -226,9 +246,27 @@
       font-size: 30px;
     }
     
+
   /*  .skin-blue .legend svg text{
       font-size: 30px;
     }*/
+    
+    /*Table heading bottom*/
+    .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(1){
+      border-bottom-width: 13px;
+    }
+
+    .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(2){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(3){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(4){
+      border-bottom-width: 13px;
+    }
     
 }
 
