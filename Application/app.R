@@ -72,7 +72,8 @@ tableHeaderArrDep <- function(airport1, airport2, tableName) {
     'hour' = 'Hour', # Use ArrHour or DepHour appropriately
     'day' = 'Day',
     'time' = 'Flight Time',
-    'distance' = 'Distance'
+    'distance' = 'Distance',
+    'top15' = 'Airports'
   )
   return(htmltools::withTags(table(class = 'display', thead(class = "center",
     tr(
@@ -81,6 +82,18 @@ tableHeaderArrDep <- function(airport1, airport2, tableName) {
       th(colspan = 2, airport2)
     ), tr(lapply(rep(
       c('Arrivals', 'Departures'), 2
+    ), th))
+  ))))
+}
+
+tableHeaderTop15 <- function(airport1, airport2, tableName) {
+  return(htmltools::withTags(table(class = 'display', thead(
+    tr(
+      th(rowspan = 2, 'Rank'),
+      th(colspan = 3, airport1),
+      th(colspan = 3, airport2)
+    ), tr(lapply(rep(
+      c('Airport','Arrivals', 'Departures'), 2
     ), th))
   ))))
 }
@@ -587,8 +600,21 @@ top15AirportsDataFrame <- function(airport) {
   return(counts)
 }
 
-top15AirportsTable <- function(airport, month) {
-  counts<-top15AirportsDataFrame(airport)
+top15AirportsTable <- function(airport1, airport2, month) {
+  counts1<-top15AirportsDataFrame(airport1)
+  counts2<-top15AirportsDataFrame(airport2)
+  monthNo <- as.numeric(subset(monthsDf, MonthName == month)$MonthNumber)
+  counts1<-subset(counts1[counts1$Month == monthNo,], select = -c(Month))
+  counts2<-subset(counts2[counts2$Month == monthNo,], select = -c(Month))
+  
+  counts1<-counts1[order(-counts1$Total_Flights),]
+  counts2<-counts2[order(-counts2$Total_Flights),]
+  counts1<-counts1[,c(6,3,4)]
+  counts2<-counts2[,c(6,3,4)]
+  counts<-cbind(counts1, counts2)
+  Rank<-1:15
+  counts<-cbind(Rank, counts)
+  return(counts)
   
 }
 
@@ -956,6 +982,16 @@ server <- function(input, output, session) {
     ) %>%
       layout(title = paste(input$flightDataAirport1, '- vs. -', input$flightDataAirport2))
   })
+  
+  output$flightDataTop15DestinationsTable <- DT::renderDataTable (
+    DT::datatable({
+      top15AirportsTable(input$flightDataAirport1, input$flightDataAirport2, input$monthBreakdownTop15)
+    },
+    container = tableHeaderTop15(input$flightDataAirport1, input$flightDataAirport2, 'top15'),
+    rownames = FALSE,
+    options = list(paging = FALSE, searching = FALSE, dom = 't',order = list(list(0,'asc')))
+    )
+  )
 
   output$deepDivePlots <- renderPlotly({
     filterValue <- switch(
