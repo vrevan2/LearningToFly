@@ -102,11 +102,72 @@
 
 .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(3){
   border-bottom: 8px solid #6a819d;
+  border-left: 4px solid #303030;
 }
 
 .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(4){
   border-bottom: 8px solid #e76e48;
 }
+
+.skin-blue #flightDataNumberOfFlightsTable tbody td:nth-child(4){
+  border-left: 4px solid #303030;
+}
+
+.skin-blue #flightDataNumberOfFlightsTable tbody td:nth-child(3){
+  padding-right: 20px;
+}
+
+/*Delay Tables*/
+.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(2){
+  border-bottom: 8px solid #EAC949; 
+}
+
+.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(3){
+  border-bottom: 8px solid #E47F7B; 
+}
+
+.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(4){
+  border-bottom: 8px solid #4B7C8C; 
+}
+
+.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(5){
+  border-bottom: 8px solid #002d58; 
+}
+
+.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(6){
+  border-bottom: 8px solid #84BCBE; 
+}
+
+/*Top 15 destination tables*/
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(2){
+  border-bottom: 8px solid #6a819d;
+}
+
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(3){
+  border-bottom: 8px solid #e76e48;
+}
+
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(5){
+  border-bottom: 8px solid #6a819d;
+}
+
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(6){
+  border-bottom: 8px solid #e76e48;
+}
+
+.skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(5){
+  border-left: 4px solid #303030;
+  padding-left: 20px;
+}
+
+.skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(4){
+  padding-right: 20px;
+}
+
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(4){
+  border-left: 4px solid #303030;
+}
+
 
 @media (min-width: 2000px){
     body * {
@@ -262,10 +323,75 @@
     
     .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(3){
       border-bottom-width: 13px;
+      border-left-width: 6px;
     }
     
     .skin-blue #flightDataNumberOfFlightsTable thead tr:nth-child(2) th:nth-child(4){
       border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataNumberOfFlightsTable tbody td:nth-child(4){
+      border-left-width: 6px;
+    }
+    
+    .skin-blue #flightDataNumberOfFlightsTable tbody td:nth-child(3){
+      padding-right: 40px;
+    }
+    
+    /*Delay tables*/
+    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(2){
+      border-bottom-width: 13px; 
+    }
+    
+    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(3){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(4){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(5){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(6){
+      border-bottom-width: 13px;
+    }
+    
+    /*Top 15 destination tables*/
+    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(2){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(3){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(5){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(6){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(5){
+      border-left-width: 6px;
+      padding-left: 40px;
+    }
+    
+    .skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(4){
+      padding-right: 40px;
+    }
+    
+    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(4){
+      border-left-width: 6px;
+    }
+    
+    .skin-blue .content-wrapper{
+      padding-left: 40px;
+      padding-right: 40px;
     }
     
 }

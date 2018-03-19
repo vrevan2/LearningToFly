@@ -16,6 +16,9 @@ colorScale <- c('#A7CAF2', '#262E38')
 
 plotLabelSize <- 12
 plotMarginTop <- 40
+plotMarginLeft <- 10
+plotMarginRight <- 10
+plotMarginBottom <- 10
 
 # Map
 zoomLevel <- 5
@@ -97,7 +100,7 @@ tableHeaderArrDep <- function(airport1, airport2, tableName) {
 }
 
 tableHeaderTop15 <- function(airport1, airport2, tableName) {
-  return(htmltools::withTags(table(class = 'display', thead(
+  return(htmltools::withTags(table(class = 'display', thead(class = "center",
     tr(
       th(rowspan = 2, 'Rank'),
       th(colspan = 3, airport1),
@@ -278,7 +281,7 @@ ui <- function() {
         fluidRow(column(width = 12, h2('Deep Dive for an Airport in 2017'))),
         fluidRow(
           column(width = 3, selectInput('breakdownSourceAirport', 'Source Airport', airportList, width = '100%', selected = 'ORD')),
-          column(width = 3, radioButtons('breakdownRadioButton', 'Select by', inline = TRUE, 
+          column(width = 4, radioButtons('breakdownRadioButton', 'Select by', inline = TRUE, 
             c('Date' = 'date', 'Target Airport' = 'airport', 'Airline' = 'airline', 'Day of the Week' = 'day'))),
           column(width = 3,
             selectInput('airportBreakdown', 'Target Airport', c(), width = '100%'),
@@ -286,7 +289,7 @@ ui <- function() {
             dateInput('dateBreakdown', 'Date', value = as.Date(format(Sys.Date(), '2017-%m-%d')), min = '2017-01-01', max = '2017-12-31', width = '100%'),
 
             selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%')),
-          column(width = 3, radioButtons('breakdownPlotType', 'Plot Type', inline = TRUE, choiceValues = c('map', 'graph'), choiceNames = c('Map', 'Graph')))
+          column(width = 2, radioButtons('breakdownPlotType', 'Plot Type', inline = TRUE, choiceValues = c('map', 'graph'), choiceNames = c('Map', 'Graph')))
         ),
         fluidRow(id = 'deepDiveGraph', box(width = 12, title = 'Number of Flights', plotlyOutput('deepDivePlots', height = '60vh'))),
         fluidRow(id = 'deepDiveMap', box(width = 12,
@@ -343,7 +346,7 @@ flightDataNoOfFlightsPlot <- function(pref, airport, stacked, is24Hour, isMetric
         marker = list(color = departureColor)
       ) %>%
 
-      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize), margin = list(t = plotMarginTop),
+      layout(title = airport, barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize), margin = list(t = plotMarginTop, b = plotMarginBottom),
              yaxis = list(range = c(0, max(max(arrDep$Frequency.x), max(arrDep$Frequency.y)))))
   )
 }
@@ -484,7 +487,7 @@ flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
         marker = list(color = 'black')
         #yaxis = 'y2'
       ) %>%
-      layout(barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize), margin = list(t = plotMarginTop)
+      layout(barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize), margin = list(t = plotMarginTop, b = plotMarginBottom)
         #yaxis2 = list(
         #  range = c(0, 120),
         #  overlaying = 'y',
@@ -586,7 +589,7 @@ top15AirportsPlot <- function(airport, stacked) {
       name = paste('Departures from', airport),
       marker = list(color = departureColor)
     ) %>%
-    layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize), margin = list(t = plotMarginTop))
+    layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize), margin = list(t = plotMarginTop, b = plotMarginBottom))
   )
 }
 
@@ -824,7 +827,7 @@ deepDivePlot <- function(airport, choice, filterValue, plotType, is24Hour) {
           name = paste('Arrivals to', airport, ifelse(isAirportChoice, paste('from', filterValue), '')),
           marker = list(color = arrivalColor)
         ) %>%
-        layout(hovermode = 'compare', title = plotTitle, font = list(size = plotLabelSize), margin = list(t = plotMarginTop), legend = list(x = 0.1, y = 0.9))
+        layout(hovermode = 'compare', title = plotTitle, font = list(size = plotLabelSize), margin = list(t = plotMarginTop, b = plotMarginBottom), legend = list(x = 0.1, y = 0.9))
   
     if(isDateChoice) {
       p <- p %>%
@@ -889,7 +892,7 @@ getHourDayHeatMap <- function(sourceData, hourColname, maxZ, is24Hour) {
   data <- arrange(data, Hour, DayOfWeek) # order by hour, dayofweek
   data <- matrix(data$n, nrow = 7, ncol = 24, dimnames = list(daysOfWeek, hours(is24Hour)) ) # convert to matrix
   return(plot_ly(name = 'By Weekday', x = hours(is24Hour), y = daysOfWeek, z = data, 
-                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ)) # plot
+                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ) %>% layout(font = list(size = plotLabelSize), margin = list(l = plotMarginLeft, r = plotMarginRight, b = plotMarginBottom))) # plot
 }
 
 getHourMonthHeatMap <- function(sourceData, hourColname, maxZ, is24Hour) {
@@ -904,7 +907,7 @@ getHourMonthHeatMap <- function(sourceData, hourColname, maxZ, is24Hour) {
   data <- arrange(data, Hour, Month) # order by hour, dayofweek
   data <- matrix(data$n, nrow = 12, ncol = 24, dimnames = list(months, hours(is24Hour)) ) # convert to matrix
   return(plot_ly(name = 'By Month', x = hours(is24Hour), y = months, z = data, 
-                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ, showscale = FALSE)) # plot
+                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ, showscale = FALSE) %>% layout(font = list(size = plotLabelSize), margin = list(l = plotMarginLeft, r = plotMarginRight, b = plotMarginBottom))) # plot
 }
 
 # server
@@ -912,7 +915,10 @@ server <- function(input, output, session) {
   observeEvent(input$dimension, {
     if(input$dimension[1] >= 2000){
       plotLabelSize <<- 25
-      plotMarginTop <<- 150
+      plotMarginTop <<- 100
+      plotMarginLeft <<- 100
+      plotMarginRight <<- 100
+      plotMarginBottom <<- 100
       zoomLevel <<- 6
       lineOpacity <<- 4
       lineWeight <<- 3
@@ -921,6 +927,9 @@ server <- function(input, output, session) {
     else{
       plotLabelSize <<- 12
       plotMarginTop <<- 40
+      plotMarginLeft <<- 40
+      plotMarginRight <<- 40
+      plotMarginBottom <<- 40
       zoomLevel <<- 5
       lineOpacity <<- 8
       lineWeight <<- 2
