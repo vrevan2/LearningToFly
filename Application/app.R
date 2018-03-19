@@ -871,7 +871,7 @@ getMap <- function() {
                        labelOptions = labelOptions( style = list("font-weight" = "normal", "line-height" = "1.5vh"), textsize = "1.3vh", direction = "auto")
            ) %>%
            addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0), textsize="1.5vh")) %>%
-           addLegend(pal = pal, values = ~total, title = '# Flights')
+           addLegend(pal = pal, values = ~total, title = '# Flights',opacity = 0.8)
          )
 }
 

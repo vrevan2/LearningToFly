@@ -118,25 +118,43 @@
 }
 
 /*Delay Tables*/
-.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(2){
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(1), 
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(8){
   border-bottom: 8px solid #EAC949; 
 }
 
-.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(3){
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(2),
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(9){
   border-bottom: 8px solid #E47F7B; 
 }
 
-.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(4){
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(3),
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(10){
   border-bottom: 8px solid #4B7C8C; 
 }
 
-.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(5){
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(4),
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(11){
   border-bottom: 8px solid #002d58; 
 }
 
-.skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(6){
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(5),
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(12){
   border-bottom: 8px solid #84BCBE; 
 }
+
+.skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(8){
+  border-left: 4px solid #303030;
+}
+
+.skin-blue #flightDataNumberOfDelaysTable tbody td:nth-child(9){
+  border-left: 4px solid #303030;
+}
+
+.skin-blue #flightDataNumberOfDelaysTable tbody td:nth-child(8){
+  padding-right: 10px;
+}
+
 
 /*Top 15 destination tables*/
 .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(2){
@@ -310,9 +328,9 @@
 /*    .skin-blue #mapFlightsToFromIL .legend{
       font-size: 25px;
     }
+    */
     
-    
-    .skin-blue #mapFlightsToFromIL .legend .leaflet-control span{
+ /*   .skin-blue .legend{
       height: 200px;
     }*/
 
@@ -343,26 +361,43 @@
     }
     
     /*Delay tables*/
-    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(2){
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(1), 
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(8){
+      border-bottom-width: 13px;
+    }
+    
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(2),
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(9){
       border-bottom-width: 13px; 
     }
     
-    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(3){
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(3),
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(10){
       border-bottom-width: 13px;
     }
     
-    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(4){
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(4),
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(11){
       border-bottom-width: 13px;
     }
     
-    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(5){
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(5),
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(12){
       border-bottom-width: 13px;
     }
     
-    .skin-blue #flightDataNumberOfDelaysTable thead th:nth-child(6){
-      border-bottom-width: 13px;
+    .skin-blue #flightDataNumberOfDelaysTable thead tr:nth-child(2) th:nth-child(8){
+      border-left-width: 6px;
     }
     
+    .skin-blue #flightDataNumberOfDelaysTable tbody td:nth-child(9){
+      border-left-width: 6px;
+    }
+
+    .skin-blue #flightDataNumberOfDelaysTable tbody td:nth-child(8){
+      padding-right: 30px;
+    }
+        
     /*Top 15 destination tables*/
     .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(2){
       border-bottom-width: 13px;
