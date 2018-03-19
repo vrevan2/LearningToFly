@@ -458,7 +458,7 @@ flightDataNoOfFlightsTable <- function(airport1, airport2, pref, month, is24Hour
   if(pref == 'airline') {
     arrDep$AirlineCode <- names(getAirlineCodePlusNames(arrDep$AirlineCode))
   }
-  arrDep <- arrDep[,c(colName, 'Frequency.x.x', 'Frequency.x.y', 'Frequency.y.x', 'Frequency.y.y', 'Month')]
+  arrDep <- arrDep[,c(colName, 'Frequency.x.x', 'Frequency.y.x', 'Frequency.x.y', 'Frequency.y.y', 'Month')]
   arrDep[is.na(arrDep)] <- 0
   return(subset(arrDep[arrDep$Month == monthNo,], select = -c(Month)))
 }
@@ -564,7 +564,7 @@ flightDataNoOfDelaysTable <- function(airport, month, is24Hour) {
   delays<-subset(delays[delays$Month == monthNo,], select = -c(Month))
   delays<-arrange(delays, ArrHour)
   delays<-delays[,c(1,2,3,4,5,6,8,7,9)]
-  delays$Percent<-format(delays$Percent, digits=2, nsmall=2)
+  delays$Percent<-as.numeric(format(delays$Percent, digits=2, nsmall=2))
   colnames(delays)<- c('Hour', 'Carrier Delays', 'Late Arrival Delays', 'National Airspace Sys. Delays', 'Security Delays', 'Weather Delays', 'Total Delays', 'Total Flights', 'Percent')
   return(delays)
 }
