@@ -12,6 +12,7 @@ library(leaflet)
 # Colors
 arrivalColor <- '#6a819d'
 departureColor <- '#e76e48'
+colorScale <- c('#A7CAF2', '#262E38')
 
 plotLabelSize <- 12
 plotMarginTop <- 40
@@ -31,7 +32,7 @@ timesDf <- data.frame(times, c(0:5))
 colnames(timesDf) <- c('TimeName', 'TimeNumber')
 
 hours <- function(is24Hour) {
-  return(if (is24Hour) paste(c(0:23), 'hr') else c(paste(c(0:11), 'am'), 'Noon', paste(c(1:11), 'pm')))
+  return(if (is24Hour) paste(c(0:23), 'hr') else c('Midnight', paste(c(1:11), 'am'), 'Noon', paste(c(1:11), 'pm')))
 }
 hoursDf <- function(is24Hour) {
   hdf <- data.frame(hours(is24Hour), c(0:23))
@@ -204,7 +205,7 @@ ui <- function() {
       ),
       tabItem(
         'flightData',
-        fluidRow(column(width = 12, h2('Number of Flights, Delays and Top 15 Destinations'))),
+        fluidRow(column(width = 12, h2('Number of Flights, Delays and Top 15 Destinations in 2017'))),
         fluidRow(
           column(width = 4, selectInput('flightDataAirport1', 'Airport 1', airportList, width = '100%', selected = 'ORD')),
           column(width = 4, selectInput('flightDataAirport2', 'Airport 2', airportList, width = '100%', selected = 'MDW')),
@@ -229,25 +230,26 @@ ui <- function() {
       ),
       tabItem(
         'deepDive',
-        fluidRow(column(width = 12, h2('Deep Dive for an Airport'))),
+        fluidRow(column(width = 12, h2('Deep Dive for an Airport in 2017'))),
         fluidRow(
-          column(width = 4, selectInput('breakdownSourceAirport', 'Source Airport', airportList, width = '100%', selected = 'ORD')),
-          column(width = 4, radioButtons('breakdownRadioButton', 'Select by', inline = TRUE, 
-            c('Map' = 'map', 'Date' = 'date', 'Target Airport' = 'airport', 'Airline' = 'airline', 'Day of the Week' = 'day'))),
-          column(width = 4,
+          column(width = 3, selectInput('breakdownSourceAirport', 'Source Airport', airportList, width = '100%', selected = 'ORD')),
+          column(width = 3, radioButtons('breakdownRadioButton', 'Select by', inline = TRUE, 
+            c('Date' = 'date', 'Target Airport' = 'airport', 'Airline' = 'airline', 'Day of the Week' = 'day'))),
+          column(width = 3,
             selectInput('airportBreakdown', 'Target Airport', c(), width = '100%'),
             selectInput('airlineBreakdown', 'Airline', c(), width = '100%'),
             dateInput('dateBreakdown', 'Date', value = as.Date(format(Sys.Date(), '2017-%m-%d')), min = '2017-01-01', max = '2017-12-31', width = '100%'),
-            selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%'))),
-
-        fluidRow(id = 'deepDiveGraph', box(title = 'Deep Dive', width = 12, plotlyOutput('deepDivePlots', height = '60vh'))),
-        fluidRow(id = 'deepDiveMap', box(title = 'Deep Dive', width = 12, leafletOutput('deepDiveLeaflet', height = '70vh')))
+            selectInput('dayBreakdown', 'Day of the Week', daysOfWeekDropDown, width = '100%')),
+          column(width = 3, radioButtons('breakdownPlotType', 'Plot Type', inline = TRUE, choiceValues = c('map', 'graph'), choiceNames = c('Map', 'Graph')))
+        ),
+        fluidRow(id = 'deepDiveGraph', box(width = 12, title = 'Number of Flights', plotlyOutput('deepDivePlots', height = '60vh'))),
+        fluidRow(id = 'deepDiveMap', box(width = 12, leafletOutput('deepDiveLeaflet', height = '70vh')))
 
       ),
       tabItem(
         'states',
         fluidRow(
-          box(title = 'Flights between IL and different states within US', leafletOutput('mapFlightsToFromIL'), width = 12)
+          box(title = 'Flights between IL and different states within US in 2017', leafletOutput('mapFlightsToFromIL'), width = 12)
         )
       )
 )))
@@ -430,7 +432,7 @@ flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
         marker = list(color = 'black')
         #yaxis = 'y2'
       ) %>%
-      layout(barmode = if (stacked) 'stack', hovermode = 'compare',font = list(size = plotLabelSize),margin = list(t = plotMarginTop)
+      layout(barmode = if (stacked) 'stack', hovermode = 'compare', font = list(size = plotLabelSize), margin = list(t = plotMarginTop)
         #yaxis2 = list(
         #  range = c(0, 120),
         #  overlaying = 'y',
@@ -485,9 +487,7 @@ top15AirportsPlot <- function(airport, stacked) {
   )
 }
 
-deepDiveMap <- function(dateValue, showDepartures, inMetric){
-  print(paste(dateValue, showDepartures, inMetric))
-  
+deepDiveMap <- function(dateValue, showDepartures, inMetric) {
   weatherData <- subset(weather, Month == as.numeric(format(dateValue, "%m")) & DayofMonth == as.numeric(format(dateValue, "%d")))
   if(showDepartures)
     weatherData <- weatherData[weatherData$OriginState == originState, ]
@@ -531,39 +531,40 @@ deepDiveMap <- function(dateValue, showDepartures, inMetric){
   return(x)
 }
 
-deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
-  deepDiveData <- flights[flights$Origin == airport | flights$Dest == airport, ]
-  
+getDeepDiveCounts <- function(airport, choice, filterValue, monthly, is24Hour) {
   isDayChoice <- choice == 'day'
   isDateChoice <- choice == 'date'
   isAirportChoice <- choice == 'airport'
+  
+  deepDiveData <- flights[flights$Origin == airport | flights$Dest == airport, ]
 
-  if(isAirportChoice) {
+    if(isAirportChoice) {
     deepDiveData <- deepDiveData[deepDiveData$Origin == filterValue | deepDiveData$Dest == filterValue, ]
   } else
-  if(choice == 'airline') {
-    deepDiveData <- merge(deepDiveData, airlines, by = 'AirlineID', all = TRUE)
-    deepDiveData <- deepDiveData[deepDiveData$AirlineCode == filterValue, ]
-  } else
-  if(isDateChoice) {
-    month <- as.numeric(format(filterValue, "%m"))
-    mday <- as.numeric(format(filterValue, "%d"))
-    deepDiveData <- deepDiveData[deepDiveData$Month == month & deepDiveData$DayofMonth == mday, ]
-  } else
-  if(isDayChoice) {
-    deepDiveData <- deepDiveData[deepDiveData$DayOfWeek == filterValue, ]
-  }
-
-  groupBy <- c('Month', 'Hour')
-
+    if(choice == 'airline') {
+      deepDiveData <- merge(deepDiveData, airlines, by = 'AirlineID', all = TRUE)
+      deepDiveData <- deepDiveData[deepDiveData$AirlineCode == filterValue, ]
+    } else
+      if(isDateChoice) {
+        month <- as.numeric(format(filterValue, "%m"))
+        mday <- as.numeric(format(filterValue, "%d"))
+        deepDiveData <- deepDiveData[deepDiveData$Month == month & deepDiveData$DayofMonth == mday, ]
+      } else
+        if(isDayChoice) {
+          deepDiveData <- deepDiveData[deepDiveData$DayOfWeek == filterValue, ]
+        }
+  
+  yaxis <- if(monthly) 'Month' else 'DayOfWeek'
+  groupBy <- c('Hour', yaxis)
+  
   deepDiveDepartures <- deepDiveData[deepDiveData$Origin == airport, ]
   deepDiveDepartures$Hour <- deepDiveDepartures$DepHour
   deepDiveArrivals <- deepDiveData[deepDiveData$Dest == airport, ]
   deepDiveArrivals$Hour <- deepDiveArrivals$ArrHour
-
+  
   counts <- merge(count(deepDiveDepartures, groupBy), count(deepDiveArrivals, groupBy), by = groupBy, all = TRUE)
   colnames(counts) <- c(groupBy, 'Departures', 'Arrivals')
-
+  
   if(isDateChoice) {
     deepDiveDelays <- deepDiveData[(deepDiveData$NASDelay != 0 & !is.na(deepDiveData$NASDelay))
                                    | (deepDiveData$SecurityDelay != 0 & !is.na(deepDiveData$SecurityDelay))
@@ -571,74 +572,111 @@ deepDivePlot <- function(airport, choice, filterValue, is24Hour) {
                                    | (deepDiveData$CarrierDelay != 0 & !is.na(deepDiveData$CarrierDelay))
                                    | (deepDiveData$LateAircraftDelay != 0 & !is.na(deepDiveData$LateAircraftDelay)), ]
     deepDiveDelays$Hour <- deepDiveDelays$ArrHour
-
+    
     deepDiveCancellations <- cancellations[cancellations$Origin == airport
                                            & cancellations$Month == as.numeric(format(filterValue, "%m"))
                                            & cancellations$DayofMonth == as.numeric(format(filterValue, "%d")), ]
     deepDiveCancellations$Hour <- deepDiveCancellations$CRSDepHour # Plot by scheduled departure hour for cancellations
-
+    
     counts <- merge(counts, count(deepDiveDelays, groupBy), by = groupBy, all = TRUE)
     counts <- merge(counts, count(deepDiveCancellations, groupBy), by = groupBy, all = TRUE)
     colnames(counts) <- c(groupBy, 'Departures', 'Arrivals', 'Delays', 'Cancellations')
   } else {
-    uniques <- expand.grid(c(0:23), c(1:12))
-    cols <- c('Hour', 'Month')
-    colnames(uniques) <- cols
-    counts <- merge(counts, uniques, by = cols, all = TRUE)
-
-    counts <- merge(counts, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
-    counts$MonthName <- ordered(counts$MonthName, months)
+    if(monthly) {
+      uniques <- expand.grid(c(0:23), c(1:12))
+      cols <- groupBy
+      colnames(uniques) <- cols
+      counts <- merge(counts, uniques, by = cols, all = TRUE)
+      
+      counts <- merge(counts, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
+      counts$MonthName <- ordered(counts$MonthName, months)
+    } else { # by day of the week
+      uniques <- expand.grid(c(0:23), c(1:7))
+      cols <- groupBy
+      colnames(uniques) <- cols
+      counts <- merge(counts, uniques, by = cols, all = TRUE)
+      
+      counts <- merge(counts, daysOfWeekDf, by.x = 'DayOfWeek', by.y = 'DayNumber', all = TRUE)
+      counts$DayName <- ordered(counts$DayName, daysOfWeek)
+    }
   }
   counts <- merge(counts, hoursDf(is24Hour), by.x = 'Hour', by.y = 'HourNumber', all = TRUE)
   counts$HourName <- ordered(counts$HourName, hours(is24Hour))
-
+  
   counts[is.na(counts)] <- 0
+  return(counts)
+}
+
+deepDivePlot <- function(airport, choice, filterValue, plotType, is24Hour) {
+  isDayChoice <- choice == 'day'
+  isDateChoice <- choice == 'date'
+  isAirportChoice <- choice == 'airport'
+  
+  counts <- getDeepDiveCounts(airport, choice, filterValue, monthly = TRUE, is24Hour)
   plotTitle = paste(airport, '-', if(isDayChoice) daysOfWeekDf[daysOfWeekDf$DayNumber == filterValue, ]$DayName else filterValue)
-
-  p <- plot_ly(
-      x = counts$HourName,
-      y = counts$Departures,
-      frame = if(!isDateChoice) counts$MonthName,
-      text = paste(counts$Departures, 'Departures from', airport, ifelse(isAirportChoice, paste('to', filterValue), '')),
-      hoverinfo = 'text',
-      name = paste('Departures from', airport, ifelse(isAirportChoice, paste('to', filterValue), '')),
-      type = 'bar',
-      marker = list(color = departureColor)
-    ) %>%
-      add_trace(
-        y = counts$Arrivals,
-        text = paste(counts$Arrivals, 'Arrivals to', airport, ifelse(isAirportChoice, paste('from', filterValue), '')),
+  
+  if(plotType == 'map') {
+    counts$n <- counts$Arrivals + counts$Departures
+    
+    if(isDayChoice) {
+      return(getHourMonthHeatMap(counts[, c('Hour', 'Month', 'n')], 'Hour', max(counts$n), is24Hour))
+    } else {
+      weeklyCounts <- getDeepDiveCounts(airport, choice, filterValue, monthly = FALSE, is24Hour)
+      weeklyCounts$n <- weeklyCounts$Arrivals + weeklyCounts$Departures
+      
+      maxZ <- max(max(counts$n), max(weeklyCounts$n))
+      
+      weeklyPlot <- getHourDayHeatMap(weeklyCounts[, c('Hour', 'DayOfWeek', 'n')], 'Hour', maxZ, is24Hour)
+      monthlyPlot <- getHourMonthHeatMap(counts[, c('Hour', 'Month', 'n')], 'Hour', maxZ, is24Hour)
+      
+      return(subplot(monthlyPlot, weeklyPlot, nrows = 2, shareX = TRUE))
+    }
+  } else {
+    p <- plot_ly(
+        x = counts$HourName,
+        y = counts$Departures,
+        frame = if(!isDateChoice) counts$MonthName,
+        text = paste(counts$Departures, 'Departures from', airport, ifelse(isAirportChoice, paste('to', filterValue), '')),
         hoverinfo = 'text',
-        name = paste('Arrivals to', airport, ifelse(isAirportChoice, paste('from', filterValue), '')),
-        marker = list(color = arrivalColor)
+        name = paste('Departures from', airport, ifelse(isAirportChoice, paste('to', filterValue), '')),
+        type = 'bar',
+        marker = list(color = departureColor)
       ) %>%
-      layout(hovermode = 'compare', title = plotTitle, font = list(size = plotLabelSize), margin = list(t = plotMarginTop), legend = list(x = 0.1, y = 0.9))
-
-  if(isDateChoice) {
-    p <- p %>%
-      add_trace(
-        y = counts$Delays,
-        text = paste(counts$Delays, 'Delays'),
-        hoverinfo = 'text',
-        name = 'Delays',
-        marker = list(color = '#e7be48')
-      ) %>%
-      add_trace(
-        y = counts$Cancellations,
-        text = paste(counts$Cancellations, 'Cancellations'),
-        hoverinfo = 'text',
-        name = 'Cancellations',
-        marker = list(color = '#795126')
-      )
+        add_trace(
+          y = counts$Arrivals,
+          text = paste(counts$Arrivals, 'Arrivals to', airport, ifelse(isAirportChoice, paste('from', filterValue), '')),
+          hoverinfo = 'text',
+          name = paste('Arrivals to', airport, ifelse(isAirportChoice, paste('from', filterValue), '')),
+          marker = list(color = arrivalColor)
+        ) %>%
+        layout(hovermode = 'compare', title = plotTitle, font = list(size = plotLabelSize), margin = list(t = plotMarginTop), legend = list(x = 0.1, y = 0.9))
+  
+    if(isDateChoice) {
+      p <- p %>%
+        add_trace(
+          y = counts$Delays,
+          text = paste(counts$Delays, 'Delays'),
+          hoverinfo = 'text',
+          name = 'Delays',
+          marker = list(color = '#e7be48')
+        ) %>%
+        add_trace(
+          y = counts$Cancellations,
+          text = paste(counts$Cancellations, 'Cancellations'),
+          hoverinfo = 'text',
+          name = 'Cancellations',
+          marker = list(color = '#795126')
+        )
+    }
+  
+    return(p)
   }
-
-  return(p)
 }
 
 getMap <- function() {
   # Load the map
 
-  us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'OGRGeoJSON')
+  us <- readOGR(dsn = 'data/us_states_hexgrid.geojson', layer = 'us_states_hexgrid')
 
   centers <- cbind.data.frame(data.frame(gCentroid(us, byid = TRUE), id = us@data$iso3166_2))
   us@data <- join(us@data, flightsIL, by = 'iso3166_2', type = 'left')
@@ -649,11 +687,11 @@ getMap <- function() {
     us@data$google_name, us@data$Arrivals, us@data$percentArr, us@data$Departures, us@data$percentDep
   ) %>% lapply(htmltools::HTML)
   
-  pal <- colorNumeric(palette = 'Blues', domain = us@data$total)
+  pal <- colorNumeric(palette = colorRamp(colorScale), domain = us@data$total)
   
   return(leaflet(us, options = leafletOptions(minZoom = 3, maxZoom = 7)) %>% setView(-99.85447, 40.70358, zoom = 5) %>%
            addPolygons(color = 'gray', weight = 1, smoothFactor = 0.5,
-                       opacity = 1.0, fillOpacity = 0.5,
+                       opacity = 1.0, fillOpacity = 0.8,
                        fillColor = ~pal(us@data$total),
                        highlightOptions = highlightOptions(color = 'black', weight = 2, bringToFront = TRUE),
                        label = us@data$labels,
@@ -662,6 +700,36 @@ getMap <- function() {
            addLabelOnlyMarkers(lng = centers$x, lat = centers$y, label = centers$id, labelOptions = labelOptions(clickable = FALSE, noHide = T, textOnly = TRUE, offset=c(0,0), textsize="2vh")) %>%
            addLegend(pal = pal, values = ~total, title = '# Flights')
          )
+}
+
+getHourDayHeatMap <- function(sourceData, hourColname, maxZ, is24Hour) {
+  baseData <- expand.grid(0:23, 1:7)
+  colnames(baseData) <- c('Hour', 'DayOfWeek')
+  
+  data <- merge(baseData, sourceData, # get values for all permutations of hour and dayofweek
+                by.x = c('Hour', 'DayOfWeek'), 
+                by.y = c(hourColname, 'DayOfWeek'),
+                all = TRUE)
+  data[which(is.na(data[,3]), arr.ind = TRUE), 3] <- 0 # update NAs to 0
+  data <- arrange(data, Hour, DayOfWeek) # order by hour, dayofweek
+  data <- matrix(data$n, nrow = 7, ncol = 24, dimnames = list(daysOfWeek, hours(is24Hour)) ) # convert to matrix
+  return(plot_ly(name = 'By Weekday', x = hours(is24Hour), y = daysOfWeek, z = data, 
+                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ)) # plot
+}
+
+getHourMonthHeatMap <- function(sourceData, hourColname, maxZ, is24Hour) {
+  baseData <- expand.grid(0:23, 1:12)
+  colnames(baseData) <- c('Hour', 'Month')
+  
+  data <- merge(baseData, sourceData, # get values for all permutations of hour and dayofweek
+                by.x = c('Hour', 'Month'), 
+                by.y = c(hourColname, 'Month'),
+                all = TRUE)
+  data[which(is.na(data[,3]), arr.ind = TRUE), 3] <- 0 # update NAs to 0
+  data <- arrange(data, Hour, Month) # order by hour, dayofweek
+  data <- matrix(data$n, nrow = 12, ncol = 24, dimnames = list(months, hours(is24Hour)) ) # convert to matrix
+  return(plot_ly(name = 'By Month', x = hours(is24Hour), y = months, z = data, 
+                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ, showscale = FALSE)) # plot
 }
 
 # server
@@ -687,14 +755,13 @@ server <- function(input, output, session) {
 
     shinyjs::show(switch(
       input$breakdownRadioButton,
-      'map' = 'dateBreakdown',
       'date' = 'dateBreakdown',
       'airport' = 'airportBreakdown',
       'airline' = 'airlineBreakdown',
       'day' = 'dayBreakdown'
     ))
     
-    shinyjs::show(if(input$breakdownRadioButton == 'map') 'deepDiveMap' else 'deepDiveGraph')
+    shinyjs::show(if(input$breakdownRadioButton == 'date' & input$breakdownPlotType == 'map') 'deepDiveMap' else 'deepDiveGraph')
   })
 
   observe({
@@ -743,7 +810,7 @@ server <- function(input, output, session) {
       'airline' = input$airlineBreakdown,
       'day' = input$dayBreakdown
     )
-    deepDivePlot(input$breakdownSourceAirport, input$breakdownRadioButton, filterValue, input$timeFormat == '24 hr')
+    deepDivePlot(input$breakdownSourceAirport, input$breakdownRadioButton, filterValue, input$breakdownPlotType, input$timeFormat == '24 hr')
   })
   
   output$deepDiveLeaflet <- renderLeaflet({ deepDiveMap(input$dateBreakdown, showDepartures = TRUE, inMetric = input$measurements == 'Metric') })
