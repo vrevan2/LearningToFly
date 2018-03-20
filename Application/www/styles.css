@@ -157,32 +157,32 @@
 
 
 /*Top 15 destination tables*/
-.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(2){
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(1){
   border-bottom: 8px solid #6a819d;
+}
+
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(2){
+  border-bottom: 8px solid #e76e48;
 }
 
 .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(3){
-  border-bottom: 8px solid #e76e48;
-}
-
-.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(5){
   border-bottom: 8px solid #6a819d;
 }
 
-.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(6){
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(4){
   border-bottom: 8px solid #e76e48;
 }
 
-.skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(5){
+.skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(4){
   border-left: 4px solid #303030;
   padding-left: 20px;
 }
 
-.skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(4){
+.skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(2){
   padding-right: 20px;
 }
 
-.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(4){
+.skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(3){
   border-left: 4px solid #303030;
 }
 
@@ -399,6 +399,10 @@
     }
         
     /*Top 15 destination tables*/
+    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(1){
+      border-bottom-width: 13px;
+    }
+    
     .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(2){
       border-bottom-width: 13px;
     }
@@ -407,24 +411,20 @@
       border-bottom-width: 13px;
     }
     
-    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(5){
+    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(4){
       border-bottom-width: 13px;
     }
     
-    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(6){
-      border-bottom-width: 13px;
-    }
-    
-    .skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(5){
+    .skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(4){
       border-left-width: 6px;
       padding-left: 40px;
     }
     
-    .skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(4){
+    .skin-blue #flightDataTop15DestinationsTable tbody td:nth-child(2){
       padding-right: 40px;
     }
     
-    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(4){
+    .skin-blue #flightDataTop15DestinationsTable thead tr:nth-child(2) th:nth-child(3){
       border-left-width: 6px;
     }
     

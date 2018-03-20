@@ -86,13 +86,13 @@ tableHeaderTwoAirports <- function(airport1, airport2, tableName, tabletype) {
     'day' = 'Day',
     'time' = 'Flight Time',
     'distance' = 'Distance',
-    'top15' = 'Rank'
+    'top15' = 'Airport'
   )
   subheaders<-switch(
     tabletype,
     'noOfFlights' = c('Arrivals', 'Departures'),
     'delays' = c('Carrier', 'Late Arr.', 'NAS', 'Security', 'Weather', 'Total', 'Percent' ),
-    'top15' = c('Airport','Arrivals', 'Departures')
+    'top15' = c('Arrivals', 'Departures')
   )
   return(htmltools::withTags(table(class = 'display', thead(class = "center",
     tr(
@@ -188,7 +188,7 @@ ui <- function() {
   dashboardHeader(title = 'Learning to Fly'),
   dashboardSidebar(
     sidebarMenu(
-      menuItem('Home', tabName = 'preferences'),
+      menuItem('Home', tabName = 'home'),
       menuItem('Compare Airports', tabName = 'flightData'),
       menuItem('Deep Dive', tabName = 'deepDive'),
       menuItem('States', tabName = 'states'),
@@ -218,15 +218,15 @@ ui <- function() {
         });'
     )),
     tabItems(
-      tabItem('insights', includeHTML('insights.html')),
       tabItem(
-        'preferences',
+        'home',
         fluidRow(
-          column(width = 4, h2('About'),
+          column(width = 6, h2('About'),
             p('Interactive Visualization of Airline Flights in Illinois'),
-            a('Project Page', href = 'https://vrevan2.github.io/LearningToFly/', target = '_blank'),
-            h2('Team "R you Shiny"'),
-            p('Amey Barapatre, Jaspreet Kaur Sohal, Sai Phaltankar and Vivek R. Shivaprabhu')
+            a('Project Page', href = 'https://vrevan2.github.io/LearningToFly/', target = '_blank')),
+          column(width = 6, h2('Team "R you Shiny"'),
+            p('Amey Barapatre, Jaspreet Kaur Sohal, Sai Phaltankar and Vivek R. Shivaprabhu')),
+          column(width = 12, includeHTML('insights.html')
         ))
       ),
       tabItem(
@@ -551,13 +551,13 @@ flightDataNoOfDelaysTable <- function(airport1, airport2, month, is24Hour) {
   
   delays1 <- flightDataNoOfDelaysDataFrame(airport1, is24Hour)
   delays1 <- subset(delays1[delays1$Month == monthNo,], select = -c(Month))
-  delays1 <- arrange(delays1, ArrHour)
+  delays1 <- arrange(delays1, Hour)
   delays1 <- delays1[,c(11,2,3,4,5,6,8,9)]
   delays1$Percent <- as.numeric(format(delays1$Percent, digits = 2, nsmall=2))
   
   delays2 <- flightDataNoOfDelaysDataFrame(airport2, is24Hour)
   delays2 <- subset(delays2[delays2$Month == monthNo,], select = -c(Month))
-  delays2 <- arrange(delays2, ArrHour)
+  delays2 <- arrange(delays2, Hour)
   delays2 <- delays2[,c(11,2,3,4,5,6,8,9)]
   delays2$Percent <- as.numeric(format(delays2$Percent, digits=2, nsmall=2))
   
@@ -611,23 +611,21 @@ top15AirportsDataFrame <- function(airport) {
 }
 
 top15AirportsTable <- function(airport1, airport2, month) {
-  counts1<-top15AirportsDataFrame(airport1)
-  counts2<-top15AirportsDataFrame(airport2)
+  counts1 <- top15AirportsDataFrame(airport1)
+  counts2 <- top15AirportsDataFrame(airport2)
   monthNo <- as.numeric(subset(monthsDf, MonthName == month)$MonthNumber)
-  counts1<-subset(counts1[counts1$Month == monthNo,], select = -c(Month))
-  counts2<-subset(counts2[counts2$Month == monthNo,], select = -c(Month))
+  counts1 <- subset(counts1[counts1$Month == monthNo,], select = -c(Month))
+  counts2 <- subset(counts2[counts2$Month == monthNo,], select = -c(Month))
   
-  counts1<-counts1[order(-counts1$Total_Flights),]
-  counts2<-counts2[order(-counts2$Total_Flights),]
-  counts1<-counts1[,c(6,3,4)]
-  counts2<-counts2[,c(6,3,4)]
-  counts1$rn<-as.numeric(rownames(counts1))
-  counts2$rn<-as.numeric(rownames(counts2))
-  counts<-merge(counts1, counts2, by='rn', all = TRUE)
-  # Rank<-1:length(counts)
-  # counts<-cbind(Rank, counts)
+  counts1 <- counts1[order(-counts1$Total_Flights),]
+  counts2 <- counts2[order(-counts2$Total_Flights),]
+  counts1 <- counts1[,c(6,3,4)]
+  counts2 <- counts2[,c(6,3,4)]
+  
+  counts <- merge(counts1, counts2, by='AirportName', all = TRUE)
+  counts[is.na(counts)] <- 0
+  
   return(counts)
-  
 }
 
 deepDiveMap <- function(dateValue, showDepartures, inMetric) {
@@ -659,8 +657,6 @@ deepDiveMap <- function(dateValue, showDepartures, inMetric) {
   destWeather <- mapply(getWeatherDetails, dests$Dest, dests$DPRCP, dests$DSNOW, dests$DSNWD, dests$DTMIN, dests$DTMAX, dests$DTAVG, inMetric)
   dests$WeatherLabel <- mapply(getWeatherLabelMarker, dests[, 'DTAVG'], dests[, 'DTMAX'], dests[, 'DTMIN'], inMetric) %>% lapply(htmltools::HTML)
   
-  print(dests$WeatherLabel)
-
   x <- addCircleMarkers(x, lng = origins$Olong, lat = origins$Olat, radius = 5, color = "red", fillColor = "red", popup = originWeather)
   x <- addCircleMarkers(x, lng = dests$Dlong, lat = dests$Dlat, radius = 5, color = "red", fillColor = "red", popup = destWeather)
   x <- addLabelOnlyMarkers(x, lng = origins$Olong, lat = origins$Olat, label = origins$WeatherLabel, labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T, textsize = "1vh"))
@@ -888,7 +884,8 @@ getHourDayHeatMap <- function(sourceData, hourColname, maxZ, is24Hour) {
   data <- arrange(data, Hour, DayOfWeek) # order by hour, dayofweek
   data <- matrix(data$n, nrow = 7, ncol = 24, dimnames = list(daysOfWeek, hours(is24Hour)) ) # convert to matrix
   return(plot_ly(name = 'By Weekday', x = hours(is24Hour), y = daysOfWeek, z = data, 
-                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ) %>% layout(font = list(size = plotLabelSize), margin = list(l = plotMarginLeft, r = plotMarginRight, b = plotMarginBottom))) # plot
+                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ, showscale = FALSE) %>%
+           layout(font = list(size = plotLabelSize), margin = list(l = plotMarginLeft, r = plotMarginRight, b = plotMarginBottom))) # plot
 }
 
 getHourMonthHeatMap <- function(sourceData, hourColname, maxZ, is24Hour) {
@@ -903,7 +900,8 @@ getHourMonthHeatMap <- function(sourceData, hourColname, maxZ, is24Hour) {
   data <- arrange(data, Hour, Month) # order by hour, dayofweek
   data <- matrix(data$n, nrow = 12, ncol = 24, dimnames = list(months, hours(is24Hour)) ) # convert to matrix
   return(plot_ly(name = 'By Month', x = hours(is24Hour), y = months, z = data, 
-                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ, showscale = FALSE) %>% layout(font = list(size = plotLabelSize), margin = list(l = plotMarginLeft, r = plotMarginRight, b = plotMarginBottom))) # plot
+                 type = "heatmap", colors = colorRamp(colorScale), zmin = 0, zmax = maxZ) %>% 
+           layout(font = list(size = plotLabelSize), margin = list(l = plotMarginLeft, r = plotMarginRight, b = plotMarginBottom))) # plot
 }
 
 # server
