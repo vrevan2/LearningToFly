@@ -489,11 +489,22 @@ flightDataNoOfDelaysPlot <- function(airport, stacked, is24Hour) {
 }
 
 flightDataNoOfDelaysDataFrame<- function(airport, is24Hour) {
-  groupBy <- c('Month', 'ArrHour')
+  delaysdata <- subset(flights, Dest == airport | Origin == airport)
+  delaysdata$Hour[delaysdata$Origin == airport] <- delaysdata$DepHour[delaysdata$Origin == airport]
+  delaysdata$Hour[delaysdata$Dest == airport] <- delaysdata$ArrHour[delaysdata$Dest == airport]
   
-  delaysdata <- subset(flights, Dest == airport)
+  groupBy <- c('Hour', 'Month')
   delays_TotalFlights <- count(delaysdata, groupBy)
   colnames(delays_TotalFlights) <- c(groupBy, 'Total')
+  
+  delaysdata <- delaysdata[(delaysdata$NASDelay != 0 & !is.na(delaysdata$NASDelay))
+                           | (delaysdata$SecurityDelay != 0 & !is.na(delaysdata$SecurityDelay))
+                           | (delaysdata$WeatherDelay != 0 & !is.na(delaysdata$WeatherDelay))
+                           | (delaysdata$CarrierDelay != 0 & !is.na(delaysdata$CarrierDelay))
+                           | (delaysdata$LateAircraftDelay != 0 & !is.na(delaysdata$LateAircraftDelay)), ]
+
+  delays_Combined <- count(delaysdata, groupBy)
+  colnames(delays_Combined) <- c(groupBy, 'Combined')
   
   delays_NAS <- delaysdata[delaysdata$NASDelay != 0 & !is.na(delaysdata$NASDelay), ]
   delays_NAS <- count(delays_NAS, groupBy)
@@ -515,28 +526,19 @@ flightDataNoOfDelaysDataFrame<- function(airport, is24Hour) {
   delays_LateAircraftDelay <- count(delays_LateAircraftDelay, groupBy)
   colnames(delays_LateAircraftDelay) <- c(groupBy, 'LAD')
   
-  delays_Combined <- delaysdata[(delaysdata$NASDelay != 0 & !is.na(delaysdata$NASDelay))
-                                | (delaysdata$SecurityDelay != 0 & !is.na(delaysdata$SecurityDelay))
-                                | (delaysdata$WeatherDelay != 0 & !is.na(delaysdata$WeatherDelay))
-                                | (delaysdata$CarrierDelay != 0 & !is.na(delaysdata$CarrierDelay))
-                                | (delaysdata$LateAircraftDelay != 0 & !is.na(delaysdata$LateAircraftDelay)), ]
-  delays_Combined <- count(delays_Combined, groupBy)
-  colnames(delays_Combined) <- c(groupBy, 'Combined')
-  
   delays <- Reduce( function(x, y) merge(x, y, by = groupBy, all = TRUE),
                     list(delays_Carrier, delays_LateAircraftDelay, delays_NAS, delays_Security,
                          delays_Weather, delays_TotalFlights, delays_Combined))
   delays$Percent <- delays$Combined * 100.00 / delays$Total
   
   uniques <- expand.grid(c(0:23), c(1:12))
-  cols <- c('ArrHour', 'Month')
-  colnames(uniques) <- cols
-  delays <- merge(delays, uniques, by = cols, all = TRUE)
+  colnames(uniques) <- groupBy
+  delays <- merge(delays, uniques, by = groupBy, all = TRUE)
   
   delays <- merge(delays, monthsDf, by.x = 'Month', by.y = 'MonthNumber', all = TRUE)
   delays$MonthName <- ordered(delays$MonthName, months)
   
-  delays <- merge(delays, hoursDf(is24Hour), by.x = 'ArrHour', by.y = 'HourNumber', all = TRUE)
+  delays <- merge(delays, hoursDf(is24Hour), by.x = 'Hour', by.y = 'HourNumber', all = TRUE)
   delays$HourName <- ordered(delays$HourName, hours(is24Hour))
   
   delays[is.na(delays)] <- 0
@@ -547,20 +549,19 @@ flightDataNoOfDelaysDataFrame<- function(airport, is24Hour) {
 flightDataNoOfDelaysTable <- function(airport1, airport2, month, is24Hour) {
   monthNo <- as.numeric(subset(monthsDf, MonthName == month)$MonthNumber)
   
-  delays1<- flightDataNoOfDelaysDataFrame(airport1, is24Hour)
-  delays1<-subset(delays1[delays1$Month == monthNo,], select = -c(Month))
-  delays1<-arrange(delays1, ArrHour)
-  delays1<-delays1[,c(11,2,3,4,5,6,8,9)]
-  delays1$Percent<-as.numeric(format(delays1$Percent, digits=2, nsmall=2))
+  delays1 <- flightDataNoOfDelaysDataFrame(airport1, is24Hour)
+  delays1 <- subset(delays1[delays1$Month == monthNo,], select = -c(Month))
+  delays1 <- arrange(delays1, ArrHour)
+  delays1 <- delays1[,c(11,2,3,4,5,6,8,9)]
+  delays1$Percent <- as.numeric(format(delays1$Percent, digits = 2, nsmall=2))
   
-  delays2<- flightDataNoOfDelaysDataFrame(airport2, is24Hour)
-  delays2<-subset(delays2[delays2$Month == monthNo,], select = -c(Month))
-  delays2<-arrange(delays2, ArrHour)
-  delays2<-delays2[,c(11,2,3,4,5,6,8,9)]
-  delays2$Percent<-as.numeric(format(delays2$Percent, digits=2, nsmall=2))
+  delays2 <- flightDataNoOfDelaysDataFrame(airport2, is24Hour)
+  delays2 <- subset(delays2[delays2$Month == monthNo,], select = -c(Month))
+  delays2 <- arrange(delays2, ArrHour)
+  delays2 <- delays2[,c(11,2,3,4,5,6,8,9)]
+  delays2$Percent <- as.numeric(format(delays2$Percent, digits=2, nsmall=2))
   
-  delays<-merge(delays1, delays2, by='HourName', sort = F)
-  # colnames(delays)<- c('Hour', 'Carrier Delays', 'Late Arrival Delays', 'National Airspace Sys. Delays', 'Security Delays', 'Weather Delays', 'Total Delays', 'Total Flights', 'Percent')
+  delays <- merge(delays1, delays2, by='HourName', sort = F)
   return(delays)
 }
 
@@ -713,21 +714,18 @@ getDeepDiveCounts <- function(airport, choice, filterValue, monthly, is24Hour) {
   
   deepDiveData <- flights[flights$Origin == airport | flights$Dest == airport, ]
 
-    if(isAirportChoice) {
+  if(isAirportChoice) {
     deepDiveData <- deepDiveData[deepDiveData$Origin == filterValue | deepDiveData$Dest == filterValue, ]
-  } else
-    if(choice == 'airline') {
-      deepDiveData <- merge(deepDiveData, airlines, by = 'AirlineID', all = TRUE)
-      deepDiveData <- deepDiveData[deepDiveData$AirlineCode == filterValue, ]
-    } else
-      if(isDateChoice) {
-        month <- as.numeric(format(filterValue, "%m"))
-        mday <- as.numeric(format(filterValue, "%d"))
-        deepDiveData <- deepDiveData[deepDiveData$Month == month & deepDiveData$DayofMonth == mday, ]
-      } else
-        if(isDayChoice) {
-          deepDiveData <- deepDiveData[deepDiveData$DayOfWeek == filterValue, ]
-        }
+  } else if(choice == 'airline') {
+    deepDiveData <- merge(deepDiveData, airlines, by = 'AirlineID', all = TRUE)
+    deepDiveData <- deepDiveData[deepDiveData$AirlineCode == filterValue, ]
+  } else if(isDateChoice) {
+    month <- as.numeric(format(filterValue, "%m"))
+    mday <- as.numeric(format(filterValue, "%d"))
+    deepDiveData <- deepDiveData[deepDiveData$Month == month & deepDiveData$DayofMonth == mday, ]
+  } else if(isDayChoice) {
+    deepDiveData <- deepDiveData[deepDiveData$DayOfWeek == filterValue, ]
+  }
   
   yaxis <- if(monthly) 'Month' else 'DayOfWeek'
   groupBy <- c('Hour', yaxis)
@@ -746,7 +744,8 @@ getDeepDiveCounts <- function(airport, choice, filterValue, monthly, is24Hour) {
                                    | (deepDiveData$WeatherDelay != 0 & !is.na(deepDiveData$WeatherDelay))
                                    | (deepDiveData$CarrierDelay != 0 & !is.na(deepDiveData$CarrierDelay))
                                    | (deepDiveData$LateAircraftDelay != 0 & !is.na(deepDiveData$LateAircraftDelay)), ]
-    deepDiveDelays$Hour <- deepDiveDelays$ArrHour
+    deepDiveDelays$Hour[deepDiveDelays$Origin == airport] <- deepDiveDelays$DepHour[deepDiveDelays$Origin == airport]
+    deepDiveDelays$Hour[deepDiveDelays$Dest == airport] <- deepDiveDelays$ArrHour[deepDiveDelays$Dest == airport]
     
     deepDiveCancellations <- cancellations[cancellations$Origin == airport
                                            & cancellations$Month == as.numeric(format(filterValue, "%m"))
