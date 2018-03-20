@@ -36,7 +36,7 @@
 						<h1>Data</h1>
 					</header>
 
-          <h2>From where we got the data?</h2>
+          <h2>Fantastic Data and Where to Find It </h2>
           <div class="posts">
             <!-- Use 16:9 images -->
             <article>
@@ -84,11 +84,41 @@
 
           <hr class="major" />
 
-          <h2>What we did to the data?</h2>
+          <h2>Data Mangling Stuff ( <a href= "#Steps">Skip to Deployment</a> ):</h2>
+          You need R and preferrably R studio and SQL Server 2016 (we have used Microsoft SQL Server 2016 x64 ) installed to do the data mangling required for this project :
+          </br>
+          </br>
+
+<ol> 
+  <li>Create a database ‘cs424’ in SQL Server.</li>
+ <li>Download the OTP Data  and a table ‘On_Time_Performance_2017’. </li>
+<li>Download the ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt and create a table ‘ Stations’.</li>
+<li>Download  the  2017 archive from  ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/by_year/ and create a table ‘weather’.</li>
+<li>Download the  https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat and create  ‘Airport’.</li>
+<li>Download the ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt and create a table ‘Station’.</li>
+<li>Run the Queries from theSQL file https://github.com/vrevan2/LearningToFly/blob/master/Application/data_mangling.sql
+and store the query results as .csv file.</li>
+</ol>
+For creating the DeepDiveMap data run the map.R to create the cancelled flights data by date and data for all the flights. Run the compiledWeatherData.R  to get the final data file for the map.
+
 
           <hr class="major" />
 
-          <h2>Libraries Used</h2>
+          <h2 id = "Steps">Instructions for Deployment :</h2>
+          <ol> 
+          <li>Install R Studio and R :
+          https://www.rstudio.com/products/rstudio/download/ </li>
+
+          <li>Clone the repository: 
+          https://github.com/vrevan2/LearningToFly</li>
+
+          <li>Install Libraries mentioned in the library section of the App.R</li>
+
+          <li>Check rgdal version by the running the command  gdalinfo --version
+          For rgdal version less than 2.2 : Change the line 856 from  layer =  ‘us_states_hexgrid‘  to layer = 'OGRGeoJSON' 
+        </li>
+          <li>Finally Run the App.</li>
+          <ol> 
 
 				</section>
 
